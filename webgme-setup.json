@@ -1,0 +1,13 @@
+{
+  "components": {
+    "plugins": {
+      "JSONLDExport": {
+        "src": "src/plugins/JSONLDExport",
+        "test": "test/plugins/JSONLDExport"
+      }
+    }
+  },
+  "dependencies": {
+    "plugins": {}
+  }
+}

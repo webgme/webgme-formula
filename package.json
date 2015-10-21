@@ -1,0 +1,32 @@
+{
+  "name": "webgme-formula",
+  "scripts": {
+    "start": "node app.js",
+    "test": "node ./node_modules/mocha/bin/mocha --recursive test"
+  },
+  "version": "1.0.0",
+  "dependencies": {
+    "webgme": "^1.0.2",
+    "jsonld": "^0.4.2"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5",
+    "rimraf": "^2.4.0",
+    "chai": "^3.0.0"
+  },
+  "description": "## Requirements: [Formula](http://formula.codeplex.com/)",
+  "main": "app.js",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webgme/webgme-formula.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/webgme/webgme-formula/issues"
+  },
+  "homepage": "https://github.com/webgme/webgme-formula"
+}
