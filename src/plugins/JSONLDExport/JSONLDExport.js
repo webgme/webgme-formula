@@ -7,12 +7,13 @@
 
 define([
     'plugin/PluginConfig',
-    'plugin/PluginBase',
-    'jsonld'
+    'plugin/PluginBase'//,
+    //'jsonld'
 ], function (
     PluginConfig,
-    PluginBase,
-    jsonld) {
+    PluginBase//,
+    //jsonld
+    ) {
     'use strict';
 
     /**
@@ -77,7 +78,7 @@ define([
         self.idCounter = 0;
         self.idStore = {};
         self.typeId2NameStore = {};
-        self.iriBase = "http://localhost:8888/";
+        self.iriBase = "http://localhost:8888";
 
         createArtifacts = function(err){
 
@@ -99,7 +100,7 @@ define([
                     // This will save the changes. If you don't want to save;
                     // exclude self.save and call callback directly from this scope.
                     self.result.setSuccess(true);
-                    self.createMessage(self.rootNode,self.jsonldOut,'info');
+                    self.createMessage(self.rootNode, self.jsonldOut, 'info');
                     self.save('added obj', function (err) {
                         callback(null, self.result);
                     });
@@ -121,32 +122,93 @@ define([
         self.logger.info('Visiting the ROOT');
 
         var graph = [];
-
         var rootData = {
                 "@context":{
 
-                    "gme": "http://editor.webgme.org/",
-                    "meta": "http://editor.webgme.org/meta",
+                    "gme": self.iriBase,
+                    "meta": self.iriBase + "/meta",
                     "xsd": "http://www.w3.org/2001/XMLSchema#",
+                    "model": self.iriBase + "/model",
+                    "gme:base": { "@id": "gme:/base", "@type": "@id" },
+                    "gme:src": { "@id": "gme:/src", "@type": "@id" },
+                    "gme:dst": { "@id": "gme:/dst", "@type": "@id" },
+                    "gme:children": {"@id": "model:/children", "@type": "@id", "@container": "@set" }
                 },
                 "@graph":graph
             };
+
+            var root = {
+                "@id": 'model:' + '/root',
+                "@type": "gme:root",
+                "model:name": self.projectName,
+                "gme:children": []
+            };
+
+            var rootChilds = self.core.getChildrenPaths(node);
+            for (var i = 0; i < rootChilds.length; i += 1 ){
+                root["gme:children"].push( 'model:' + rootChilds[i] );  
+            }
+            graph.push(root);
+            
+            var meta = {
+                "@id": 'model:' + '/meta',
+                "@type": "gme:META",
+                "gme:children": []
+            };
+            for (var entry in self.META) {
+                if (self.META.hasOwnProperty(entry)) {
+                    meta["gme:children"].push( 'model:' + self.core.getPath(self.META[entry]) );  
+                }
+            }
+
+            graph.push(meta);
+
         self.jsonldOut = rootData;
-        return {context:{jsonldOut: self.jsonldOut, sfcParent: graph, sfcTypes: graph}};
+        return {context:{jsonldOut: self.jsonldOut, parent: graph, meta: meta }};
     }
 
     JSONLDExport.prototype.generalVisitor = function(node, parent, context){
         var self = this;
         self.logger.info('Visiting a Node');
-        return {'error': undefined, context:{}};
+
+        var nodeAttrNames = self.core.getAttributeNames(node);
+        var nodePtrNames = self.core.getPointerNames(node);
+        var nodeChilds = self.core.getChildrenPaths(node);
+        var nodeModel = {
+                //"name": self.core.getAttribute( node, 'name' ),
+                "@id": 'model:' + self.core.getPath(node),
+                "@type": "model",
+                "gme:base": 'model:' + self.core.getPointerPath(node, 'base')
+            };
+
+        for ( var i = 0; i < nodeAttrNames.length; i += 1 ) {
+            nodeModel["model:" + nodeAttrNames[i]] = self.core.getAttribute( node, nodeAttrNames[i] );
+        }
+
+        for ( i = 0; i < nodePtrNames.length; i += 1 ) {
+            if(nodePtrNames[i] == 'src' || nodePtrNames[i] == 'dst'){
+                nodeModel["gme:" + nodePtrNames[i]] = 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] );
+            }else if(nodePtrNames[i] != 'base'){
+                nodeModel["model:" + nodePtrNames[i]] = 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] );
+            }
+        }
+        if(nodeChilds.length > 0 ){
+            nodeModel["gme:children"] = [];
+            for ( i = 0; i < nodeChilds.length; i += 1 ) 
+                nodeModel["gme:children"].push( 'model:' + nodeChilds[i] );  
+        }
+        
+
+        context['parent'].push(nodeModel);   
+        return {context:context};
     }
 
     JSONLDExport.prototype.getVisitorFuncName = function(nodeType){
         var self = this,
             visitorName = 'generalVisitor';
-        if(nodeType){
-            visitorName = 'visit_'+ nodeType;
-        }
+        //if(nodeType){
+        //    visitorName = 'visit_'+ nodeType;
+        //}
         self.logger.debug('Genarated visitor Name: ' + visitorName);
         return visitorName;   
     }
@@ -169,13 +231,13 @@ define([
         var generalChildSorter = function(a, b) {
 
             //a is less than b by some ordering criterion : return -1;
-            if(self.isMetaTypeOf(a, self.META['Types'])){
-                return -1;
-            }
+            //if(self.isMetaTypeOf(a, self.META['Types'])){
+            //    return -1;
+            //}
             //a is greater than b by the ordering criterion: return 1;
-            if(self.isMetaTypeOf(b, self.META['Types'])){
-                return 1;
-            }
+            //if(self.isMetaTypeOf(b, self.META['Types'])){
+            //    return 1;
+            //}
 
             // a equal to b:
             return 0;
@@ -233,7 +295,7 @@ define([
     };
 
     JSONLDExport.prototype.visitAllChildrenRec = function ( node, context, counter, callback ) {
-        var self = this;
+         var self = this;
 
         if (self.excludeFromVisit(node)){
             callback(null, context);
@@ -250,7 +312,18 @@ define([
                 callback( 'loadChildren failed for ' + self.core.getAttribute( node, 'name' ) );
                 return;
             }
+
+            doneModelNodeCallback = function ( childNode ) {
+                return function ( err, ctx ) {
+                    if ( err ) {
+                        callback( err );
+                        return;
+                    }
+                };
+            };
+
             if ( children.length === 0 ) {
+                self.doneModelNode(node,context,doneModelNodeCallback);
                 callback( null );
                 return;
             } 
@@ -276,14 +349,7 @@ define([
                 self.atModelNode( children[ i ], node, self.cloneCtx(context), atModelNodeCallback( children[ i ] ) );
             }
 
-            doneModelNodeCallback = function ( childNode ) {
-                return function ( err, ctx ) {
-                    if ( err ) {
-                        callback( err );
-                        return;
-                    }
-                };
-            };
+            
 
             if(node !== self.rootNode){
                 self.doneModelNode(node,context,doneModelNodeCallback);
