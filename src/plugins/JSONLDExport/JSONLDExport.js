@@ -140,7 +140,7 @@ define([
             var root = {
                 "@id": 'model:' + '/root',
                 "@type": "gme:root",
-                "model:name": self.projectName,
+                "model:name": {value: self.projectName, type:"string"},
                 "gme:children": []
             };
 
@@ -182,14 +182,22 @@ define([
             };
 
         for ( var i = 0; i < nodeAttrNames.length; i += 1 ) {
-            nodeModel["model:" + nodeAttrNames[i]] = self.core.getAttribute( node, nodeAttrNames[i] );
+            nodeModel["model:" + nodeAttrNames[i]] = {
+                value: self.core.getAttribute( node, nodeAttrNames[i]),
+                type: self.core.getAttributeMeta(node, nodeAttrNames[i])['type']};
         }
 
         for ( i = 0; i < nodePtrNames.length; i += 1 ) {
             if(nodePtrNames[i] == 'src' || nodePtrNames[i] == 'dst'){
-                nodeModel["gme:" + nodePtrNames[i]] = 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] );
+                nodeModel["gme:" + nodePtrNames[i]] = {
+                    value: 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] ),
+                    type: "pointer"
+                };
             }else if(nodePtrNames[i] != 'base'){
-                nodeModel["model:" + nodePtrNames[i]] = 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] );
+                nodeModel["model:" + nodePtrNames[i]] = {
+                    value: 'model:' +  self.core.getPointerPath( node, nodePtrNames[i] ),
+                    type: "pointer"
+                };
             }
         }
         if(nodeChilds.length > 0 ){
