@@ -4,6 +4,10 @@
       "JSONLDExport": {
         "src": "src/plugins/JSONLDExport",
         "test": "test/plugins/JSONLDExport"
+      },
+      "Export2FORMULA": {
+        "src": "src/plugins/Export2FORMULA",
+        "test": "test/plugins/Export2FORMULA"
       }
     }
   },
