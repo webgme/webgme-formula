@@ -6,7 +6,7 @@
   },
   "version": "1.0.0",
   "dependencies": {
-    "webgme": "^1.0.2",
+    "webgme": "=1.4.1",
     "jsonld": "^0.4.2"
   },
   "devDependencies": {
