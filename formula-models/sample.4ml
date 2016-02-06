@@ -1,0 +1,55 @@
+domain WebGME
+{
+	// webgme specific region
+    FCO ::= new (Integer).
+
+	// TODO: build up type system for attribute
+    Attribute ::= (node: Any, name: String, type: String, default: String).
+	
+	Pointer ::= (node: Any, name: String, target: Any + { NIL }).
+	
+	// TODO: target is an array of FCOs
+	//Set ::= (node: Any, name: String, target: any).
+
+	Base ::= (node: Any, target: Any + { NIL }).
+
+	// TODO: define multiplicity better
+	Containment ::= (node: Any, child: Any).
+
+	Abstract ::= (node: Any).
+
+
+	Base(node, NIL) :- node is FCO.
+	Attribute(node, "name", "string", "FCO") :- node is FCO.
+
+
+	// Domain specific region
+	StateMachine ::= new (Integer).
+	Base(node, fco) :- node is StateMachine, fco is FCO.
+
+	Containment(parent, child) :- parent is StateMachine, child is BaseState.
+	Containment(parent, child) :- parent is StateMachine, child is Transition.
+
+	BaseState ::= (Integer).	
+	Base(node, base) :- node is BaseState, base is FCO.	
+	Abstract(node) :- node is BaseState.
+	Attribute(node, "id", "string", "0") :- node is BaseState.
+
+    State ::= new (Integer).
+	Base(node, base) :- node is State, base is BaseState.
+
+
+	InitialState ::= new (Integer).
+	Base(node, base) :- node is InitialState, base is BaseState.
+
+
+	FinalState ::= new (Integer).
+	Base(node, base) :- node is FinalState, base is BaseState.
+
+
+	Transition ::= new (Integer).
+	Base(node, base) :- node is Transition, base is FCO.
+	Attribute(node, "guard", "string", "") :- node is Transition.
+	Pointer(node, "src", target) :- node is Transition, target is BaseState.
+	Pointer(node, "dst", target) :- node is Transition, target is BaseState.
+}
