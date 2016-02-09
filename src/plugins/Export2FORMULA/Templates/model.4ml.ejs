@@ -2,7 +2,13 @@
 // Project name: <%= projectName %>
 // Version     : <%= hash %>
 
-domain WebGME
+domain WebGME1
+{
+  NodeList ::= Node + {NIL}.
+  Node ::= new (ID: String, base: any NodeList).
+}
+
+model m of WebGME1
 {
   <%
   var nodeData, i, j, keys = Object.keys(nodes);
@@ -11,10 +17,77 @@ domain WebGME
   // <%= nodeData.name %>
   // <%= nodeData.id %>
   // <%= nodeData.guid %>
-  <%= nodeData.name %> ::= new (Integer).
+
     <% if (nodeData.base) { %>
+      <%= nodeData.name %> is Node("<%= nodeData.id %>", <%= nodes[nodeData.base].name %>).
   // base is <%= nodes[nodeData.base].name %> <%= nodes[nodeData.base].id %> <%= nodes[nodeData.base].guid %>
   // meta is <%= nodes[nodeData.meta].name %> <%= nodes[nodeData.meta].id %> <%= nodes[nodeData.meta].guid %>
+    <%} else {%>
+      // FCO
+      <%= nodeData.name %> is Node("<%= nodeData.id %>", NIL).
+    <%}%>
+    <% if (nodeData.isAbstract) { %>
+      // this type is abstract
+    <% } else { %>
+      // this type is NOT abstract
+    <%}%>
+    <% if (nodeData.jsonMeta.children.items.length > 0) { %>
+      // valid children constraint: min: <%= nodeData.jsonMeta.children.min %> max: <%= nodeData.jsonMeta.children.max %>
+      <%
+      for (j = 0; j < nodeData.jsonMeta.children.items.length; j += 1) {%>
+        // valid child: <%= nodeData.jsonMeta.children.items[j] %> min: <%= nodeData.jsonMeta.children.minItems[j] %> max: <%= nodeData.jsonMeta.children.maxItems[j] %>
+      <%}%>
+    <%}%>
+    <%
+    var attribute, attributeNames = Object.keys(nodeData.jsonMeta.attributes);
+    for (j = 0; j < attributeNames.length; j += 1) {
+      attribute = nodeData.jsonMeta.attributes[attributeNames[j]];%>
+      // attribute: <%= attributeNames[j] %> <%= attribute.type %> <%= nodeData.attributes[attributeNames[j]] %>
+    <%}%>
+    <%
+    var pointer, pointerNames = Object.keys(nodeData.jsonMeta.pointers);
+    for (j = 0; j < pointerNames.length; j += 1) {
+      pointer = nodeData.jsonMeta.pointers[pointerNames[j]];%>
+      // pointer name: <%= pointerNames[j] %> type: <%= pointer.items %> <%= nodeData.pointers[pointerNames[j]] %>
+    <%}%>
+  <%}%>
+}
+
+
+domain WebGME2
+{
+  NodeList ::= Node + {NIL}.
+  Node ::= new (ID: String, base: String).
+
+  NodeBase ::= (Node, Node).
+  NodeBase(child, base) :- child is Node(childId, baseId),
+                           base is Node(baseId, _).
+
+  Debug ::= new (Node, Node).
+}
+
+transform T(in::WebGME2) returns(out::WebGME2)
+{
+  out.Debug(_(child), _(base)):- in.NodeBase(child, base).
+}
+
+model m2 of WebGME2
+{
+  <%
+  var nodeData, i, j, keys = Object.keys(nodes);
+  for (i = 0; i < keys.length; i += 1) {
+      nodeData = nodes[keys[i]];%>
+  // <%= nodeData.name %>
+  // <%= nodeData.id %>
+  // <%= nodeData.guid %>
+
+    <% if (nodeData.base) { %>
+      Node("<%= nodeData.id %>", "<%= nodes[nodeData.base].id %>").
+  // base is <%= nodes[nodeData.base].name %> <%= nodes[nodeData.base].id %> <%= nodes[nodeData.base].guid %>
+  // meta is <%= nodes[nodeData.meta].name %> <%= nodes[nodeData.meta].id %> <%= nodes[nodeData.meta].guid %>
+    <%} else {%>
+      // FCO
+      Node("<%= nodeData.id %>", "").
     <%}%>
     <% if (nodeData.isAbstract) { %>
       // this type is abstract
