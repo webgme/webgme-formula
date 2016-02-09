@@ -66,51 +66,103 @@ define([
         var self = this,
             nodeObject;
 
-
         // Using the logger.
-        self.logger.debug('This is a debug message.');
-        self.logger.info('This is an info message.');
-        self.logger.warn('This is a warning message.');
-        self.logger.error('This is an error message.');
+        // self.logger.debug('This is a debug message.');
+        // self.logger.info('This is an info message.');
+        // self.logger.warn('This is a warning message.');
+        // self.logger.error('This is an error message.');
 
         // Using the coreAPI to make changes.
 
         nodeObject = self.activeNode;
 
-        self.core.setAttribute(nodeObject, 'name', 'My new obj');
-        self.core.setRegistry(nodeObject, 'position', {x: 70, y: 70});
+        // export the entire project for now
+        self.core.loadSubTree(self.rootNode, function (err, nodes) {
+          if (err) {
+            // Handle error
+            callback(err);
+            return;
+          }
+          // Here we have access to all the nodes that is contained in node
+          // at any level.
+
+          // sort nodes based on ids
+          nodes.sort(function (n1, n2) {
+            return self.core.getPath(n1).localeCompare(self.core.getPath(n2));
+          });
+
+          // First transform ejs-files into js files (needed for client-side runs) -> run Templates/combine_templates.js.
+          // See instructions in file. You must run this after any modifications to the ejs template.
+          var testData = {
+            projectName: self.projectId,
+            hash: self.commitHash,
+            nodes: {}
+          };
 
 
-        // First transform ejs-files into js files (needed for client-side runs) -> run Templates/combine_templates.js.
-        // See instructions in file. You must run this after any modifications to the ejs template.
-        var templatePY = ejs.render(TEMPLATES['Python.py.ejs'], {a: 'a', b: 'b'});
-        var templateFileName = 'generatedFiles/subDir/Python.py';
-        var artifact = self.blobClient.createArtifact('templateFiles');
-        artifact.addFile(templateFileName, templatePY, function (err) {
-            if (err) {
-                callback(err, self.result);
-                return;
+          var i,
+              j,
+              names,
+              thisNode,
+              thisData,
+              jsonMeta;
+
+          for (i = 0; i < nodes.length; i += 1) {
+            thisNode = nodes[i];
+            if (thisNode !== self.core.getBaseType(thisNode)) {
+              // skip anything that is not meta type
+              continue;
             }
-            self.blobClient.saveAllArtifacts(function (err, hashes) {
-                if (err) {
-                    callback(err, self.result);
-                    return;
-                }
-                // This will add a download hyperlink in the result-dialog.
-                self.result.addArtifact(hashes[0]);
-                // This will save the changes. If you don't want to save;
-                // exclude self.save and call callback directly from this scope.
-                self.save('Export2FORMULA updated model.', function (err) {
-                    if (err) {
-                        callback(err, self.result);
-                        return;
-                    }
-                    self.result.setSuccess(true);
-                    callback(null, self.result);
-                });
-            });
-        });
 
+            jsonMeta = self.core.getJsonMeta(thisNode);
+            thisData = {
+              id: self.core.getPath(thisNode),
+              guid: self.core.getGuid(thisNode),
+              base: self.core.getPath(self.core.getBase(thisNode)),
+              meta: self.core.getPath(self.core.getBaseType(thisNode)),
+              name: self.core.getAttribute(thisNode, 'name'),
+              abstract: self.core.isAbstract(thisNode),
+              jsonMeta: jsonMeta,
+              attributes: {}, // TODO: add values
+              pointers: {} // TODO: add values
+            };
+            testData.nodes[self.core.getPath(thisNode)] = thisData;
+
+            names = Object.keys(jsonMeta.attributes);
+            for (j = 0; j < names.length; j += 1) {
+              thisData.attributes[names[j]] = self.core.getAttribute(thisNode, names[j]);
+            }
+
+            names = Object.keys(jsonMeta.pointers);
+            for (j = 0; j < names.length; j += 1) {
+              thisData.pointers[names[j]] = self.core.getPointerPath(thisNode, names[j]);
+            }
+            console.log(jsonMeta);
+          }
+
+
+          var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
+          self.logger.info(templatePY);
+
+          var templateFileName = 'generatedFiles/model.4ml';
+          var artifact = self.blobClient.createArtifact('templateFiles');
+          artifact.addFile(templateFileName, templatePY, function (err) {
+              if (err) {
+                  callback(err, self.result);
+                  return;
+              }
+              self.blobClient.saveAllArtifacts(function (err, hashes) {
+                  if (err) {
+                      callback(err, self.result);
+                      return;
+                  }
+                  // This will add a download hyperlink in the result-dialog.
+                  self.result.addArtifact(hashes[0]);
+                  self.result.setSuccess(true);
+                  callback(null, self.result);
+              });
+          });
+        });
     };
 
     return Export2FORMULA;
