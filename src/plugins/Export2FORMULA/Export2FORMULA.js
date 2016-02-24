@@ -144,8 +144,8 @@ define([
           var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
           self.logger.info(templatePY);
 
-          var fs = require('fs');
-          fs.writeFileSync('model.4ml', templatePY);
+          //var fs = require('fs');
+          //fs.writeFileSync('model.4ml', templatePY);
 
           var templateFileName = 'generatedFiles/model.4ml';
           var artifact = self.blobClient.createArtifact('templateFiles');

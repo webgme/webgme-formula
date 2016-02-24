@@ -1,13 +1,15 @@
 {
-  "name": "webgme-formula",
+  "name": "formula",
   "scripts": {
     "start": "node app.js",
     "test": "node ./node_modules/mocha/bin/mocha --recursive test"
   },
   "version": "1.0.0",
   "dependencies": {
-    "webgme": "=1.4.1",
     "jsonld": "^0.4.2"
+  },
+  "peerDependencies": {
+    "webgme": "1.x"
   },
   "devDependencies": {
     "mocha": "^2.2.5",
