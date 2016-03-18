@@ -159,6 +159,7 @@ define([
               name: self.core.getAttribute(thisNode, 'name'),
               parent: self.core.getPath(self.core.getParent(thisNode)),
               isAbstract: self.core.isAbstract(thisNode),
+              isMetaType: self.core.getBaseType(thisNode) === thisNode,
               jsonMeta: jsonMeta,
               attributes: {}, // TODO: add values
               pointers: {} // TODO: add values

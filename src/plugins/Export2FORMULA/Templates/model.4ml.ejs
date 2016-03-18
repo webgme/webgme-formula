@@ -13,6 +13,7 @@ domain WebGME
   primitive GMEParent    ::= (childId: String, parentId: String).
   primitive GMEAbstract  ::= (nodeId:String, value:Boolean).
   primitive GMEPointer   ::= (name:String, pointsToId:String, nodeId:String).
+  primitive GMEIsMetaType::= (nodeId:String, value:Boolean).
 
   primitive Debug ::= (String, String).
 <% } else if (formulaVersion === '2') { %>
@@ -21,6 +22,7 @@ domain WebGME
   GMEParent    ::= new (childId: String, parentId: String).
   GMEAbstract  ::= new (nodeId:String, value:Boolean).
   GMEPointer   ::= new (name:String, pointsToId:String, nodeId:String).
+  GMEIsMetaType    ::= new (nodeId:String, value:Boolean).
 
   Debug ::= new (String, String).
 <% } %>
@@ -62,6 +64,12 @@ domain WebGME
                              , node is GMENode(nodeId, _)
                              .
 
+   // IsMetaType
+   IsMetaType ::= (GMENode, Boolean).
+   IsMetaType(node, value) :-   GMEIsMetaType(nodeId, value)
+                              , node is GMENode(nodeId, _)
+                              .
+
   // Connections
   Connections ::= (GMENode).
   Connections(n) :-   n is GMENode
@@ -101,27 +109,72 @@ domain WebGME
 }
 
 <% if (formulaVersion === '1') { %>
-  transform T from in1::WebGME to out1::WebGME
-  {
-    /*out1.Debug(cr_name, cr_id) :-
-                                  metaDfId = "/1329246314/808227394/1194191410"
-                                , appNode = in1.GMENode("/817592481/G/n", _)
+transform T from in1::WebGME to out1::WebGME
+{
+  /*out1.Debug(cr_name, cr_id) :-
+                                metaDfId = "/1329246314/808227394/1194191410"
+                              , appNode = in1.GMENode("/817592481/G/n", _)
 
-                                , cr_name="credit_identity"
+                              , cr_name="credit_identity"
 
-                                , metaDfNode = in1.GMENode(metaDfId, _)
-                                , in1.InheritanceTree(child, metaDfNode)
-                                , in1.ContainmentTree(child, appNode)
-                                , child is in1.GMENode(cr_id, _)
-                                , in1.Attribute("name", cr_name, child)
-                                .*/
-    out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
-  }
+                              , metaDfNode = in1.GMENode(metaDfId, _)
+                              , in1.InheritanceTree(child, metaDfNode)
+                              , in1.ContainmentTree(child, appNode)
+                              , child is in1.GMENode(cr_id, _)
+                              , in1.Attribute("name", cr_name, child)
+                              .*/
+  out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
+}
 <% } else if (formulaVersion === '2') { %>
-  transform T (in1::WebGME) returns (out1::WebGME)
-  {
-    out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
-  }
+transform T (in1::WebGME) returns (out1::WebGME)
+{
+  //out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
+  out1.Debug(name, metaName) :- in1.GetName(metaName, metaNode)
+                            , in1.GetName(name, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            .
+}
+
+transform T2 (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug("src", srcId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetSrcNode(srcNode, cNode)
+                            , in1.GetNode(srcId, srcNode)
+                            .
+  out1.Debug("dst", dstId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetDstNode(dstNode, cNode)
+                            , in1.GetNode(dstId, dstNode)
+                            .
+}
+
+transform TMetaTypes (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(nodeId, name) :- in1.GetNode(nodeId, node)
+                            , in1.IsMetaType(node, TRUE)
+                            , in1.GetName(name, node)
+                            .
+}
+
+transform TInstanceModels (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(name, metaName) :- in1.IsMetaType(node, FALSE)
+                            , in1.GetName(name, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            , in1.IsMetaType(metaNode, TRUE)
+                            , in1.GetName(metaName, metaNode)
+                            .
+}
+
+transform TInstancesOfType (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(name, nodeId) :- in1.IsMetaType(node, FALSE)
+                            , in1.GetName(name, node)
+                            , in1.GetNode(nodeId, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            , in1.IsMetaType(metaNode, TRUE)
+                            , in1.GetName("Center", metaNode)
+                            .
+}
 <% } %>
 
 
@@ -155,6 +208,11 @@ model m of WebGME
     <% } else { %>
       GMEAbstract("<%= nodeData.id %>", <%=formula.false%>)<%=formula.lineEnding%>
     <%}%>
+    <% if (nodeData.isMetaType) { %>
+      GMEIsMetaType("<%= nodeData.id %>", <%=formula.true%>)<%=formula.lineEnding%>
+    <% } else { %>
+      GMEIsMetaType("<%= nodeData.id %>", <%=formula.false%>)<%=formula.lineEnding%>
+    <%}%>
     <% if (nodeData.jsonMeta.children.items.length > 0) { %>
       // valid children constraint: min: <%= nodeData.jsonMeta.children.min %> max: <%= nodeData.jsonMeta.children.max %>
       <%
@@ -173,7 +231,7 @@ model m of WebGME
     var pointer, pointerNames = Object.keys(nodeData.jsonMeta.pointers);
     for (j = 0; j < pointerNames.length; j += 1) {
       pointer = nodeData.jsonMeta.pointers[pointerNames[j]];%>
-      GMEPointer("<%= pointerNames[j] %>", "<%= pointer.items %>", "<%= nodeData.id %>")<%=formula.lineEnding%>
+      GMEPointer("<%= pointerNames[j] %>", "<%= nodeData.pointers[pointerNames[j]] %>", "<%= nodeData.id %>")<%=formula.lineEnding%>
       // pointer name: <%= pointerNames[j] %> type: <%= pointer.items %> <%= nodeData.pointers[pointerNames[j]] %>
     <%}%>
   <%}%>

@@ -27,3 +27,6 @@ config/config.dev*.js
 
 *.swp
 *~
+
+Result*.4ml
+model.4ml
