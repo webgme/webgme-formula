@@ -96,8 +96,26 @@ define([
           var testData = {
             projectName: self.projectId,
             hash: self.commitHash,
+            formulaVersion: 2,
+            formula: {},
             nodes: {}
           };
+
+          if (testData.formulaVersion === 1) {
+            testData.formula = {
+              lineEnding: '',
+              true: 'true',
+              false: 'false'
+            }
+          } else if (testData.formulaVersion === 2) {
+            testData.formula = {
+              lineEnding: '.',
+              true: 'TRUE',
+              false: 'FALSE'
+            }
+          } else {
+            // throw error
+          }
 
 
           var i,
@@ -111,7 +129,7 @@ define([
             thisNode = nodes[i];
             if (thisNode !== self.core.getBaseType(thisNode)) {
               // skip anything that is not meta type
-              continue;
+              //continue;
             }
 
             jsonMeta = self.core.getJsonMeta(thisNode);
@@ -121,6 +139,7 @@ define([
               base: self.core.getPath(self.core.getBase(thisNode)),
               meta: self.core.getPath(self.core.getBaseType(thisNode)),
               name: self.core.getAttribute(thisNode, 'name'),
+              parent: self.core.getPath(self.core.getParent(thisNode)),
               isAbstract: self.core.isAbstract(thisNode),
               jsonMeta: jsonMeta,
               attributes: {}, // TODO: add values
@@ -144,8 +163,10 @@ define([
           var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
           self.logger.info(templatePY);
 
-          //var fs = require('fs');
-          //fs.writeFileSync('model.4ml', templatePY);
+          if (typeof window === 'undefined') {
+            var fs = require('fs');
+            fs.writeFileSync('model.4ml', templatePY);
+          }
 
           var templateFileName = 'generatedFiles/model.4ml';
           var artifact = self.blobClient.createArtifact('templateFiles');
