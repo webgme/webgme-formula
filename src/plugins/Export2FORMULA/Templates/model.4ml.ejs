@@ -7,7 +7,7 @@ domain WebGME
   // WebGME primitives //
   ///////////////////////
 
-<% if (formulaVersion === 1) { %>
+<% if (formulaVersion === '1') { %>
   primitive GMENode      ::= (id: String, base: String).
   primitive GMEAttribute ::= (name:String, value:String, nodeId:String).
   primitive GMEParent    ::= (childId: String, parentId: String).
@@ -15,7 +15,7 @@ domain WebGME
   primitive GMEPointer   ::= (name:String, pointsToId:String, nodeId:String).
 
   primitive Debug ::= (String, String).
-<% } else if (formulaVersion === 2) { %>
+<% } else if (formulaVersion === '2') { %>
   GMENode      ::= new (id: String, base: String).
   GMEAttribute ::= new (name:String, value:String, nodeId:String).
   GMEParent    ::= new (childId: String, parentId: String).
@@ -100,7 +100,7 @@ domain WebGME
                                    .
 }
 
-<% if (formulaVersion === 1) { %>
+<% if (formulaVersion === '1') { %>
   transform T from in1::WebGME to out1::WebGME
   {
     /*out1.Debug(cr_name, cr_id) :-
@@ -117,7 +117,7 @@ domain WebGME
                                 .*/
     out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
   }
-<% } else if (formulaVersion === 2) { %>
+<% } else if (formulaVersion === '2') { %>
   transform T (in1::WebGME) returns (out1::WebGME)
   {
     out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).

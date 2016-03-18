@@ -51,6 +51,23 @@ define([
         return '0.1.0';
     };
 
+    Export2FORMULA.prototype.getConfigStructure = function () {
+        return [
+            {
+                name: 'formulaVersion',
+                displayName: 'Formula version',
+                description: 'Target formula version',
+                value: '2',
+                valueType: 'string',
+                valueItems: [
+                    '1',
+                    '2'
+                ],
+                readOnly: false
+            }
+        ];
+    };
+
     /**
      * Main function for the plugin to execute. This will perform the execution.
      * Notes:
@@ -66,6 +83,7 @@ define([
         var self = this,
             nodeObject;
 
+        self.currentConfig = self.getCurrentConfig();
         // Using the logger.
         // self.logger.debug('This is a debug message.');
         // self.logger.info('This is an info message.');
@@ -96,18 +114,18 @@ define([
           var testData = {
             projectName: self.projectId,
             hash: self.commitHash,
-            formulaVersion: 2,
+            formulaVersion: self.currentConfig.formulaVersion,
             formula: {},
             nodes: {}
           };
 
-          if (testData.formulaVersion === 1) {
+          if (testData.formulaVersion === '1') {
             testData.formula = {
               lineEnding: '',
               true: 'true',
               false: 'false'
             }
-          } else if (testData.formulaVersion === 2) {
+          } else if (testData.formulaVersion === '2') {
             testData.formula = {
               lineEnding: '.',
               true: 'TRUE',
@@ -156,12 +174,12 @@ define([
             for (j = 0; j < names.length; j += 1) {
               thisData.pointers[names[j]] = self.core.getPointerPath(thisNode, names[j]);
             }
-            console.log(jsonMeta);
+            //console.log(jsonMeta);
           }
 
 
           var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
-          self.logger.info(templatePY);
+          //self.logger.info(templatePY);
 
           if (typeof window === 'undefined') {
             var fs = require('fs');
