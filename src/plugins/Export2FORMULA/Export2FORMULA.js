@@ -114,6 +114,7 @@ define([
           var testData = {
             projectName: self.projectId,
             hash: self.commitHash,
+            domainName: self.projectName,
             formulaVersion: self.currentConfig.formulaVersion,
             formula: {},
             nodes: {}
@@ -180,16 +181,21 @@ define([
 
 
           var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
+          var templatePY2 = ejs.render(TEMPLATES['model2.4ml.ejs'], testData);
           //self.logger.info(templatePY);
 
           if (typeof window === 'undefined') {
             var fs = require('fs');
             fs.writeFileSync('model.4ml', templatePY);
+            fs.writeFileSync('model2.4ml', templatePY2);
           }
 
-          var templateFileName = 'generatedFiles/model.4ml';
+          var files = {
+            'generatedFiles/model.4ml': templatePY,
+            'generatedFiles/model2.4ml': templatePY2
+          }
           var artifact = self.blobClient.createArtifact('templateFiles');
-          artifact.addFile(templateFileName, templatePY, function (err) {
+          artifact.addFiles(files, function (err) {
               if (err) {
                   callback(err, self.result);
                   return;

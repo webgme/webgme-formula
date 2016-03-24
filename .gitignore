@@ -29,4 +29,4 @@ config/config.dev*.js
 *~
 
 Result*.4ml
-model.4ml
+model*.4ml
