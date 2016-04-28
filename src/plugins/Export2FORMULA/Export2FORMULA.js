@@ -8,14 +8,18 @@
 define([
     'plugin/PluginConfig',
     'plugin/PluginBase',
+    'text!./metadata.json',
     'common/util/ejs',
     'plugin/Export2FORMULA/Export2FORMULA/Templates/Templates'
 ], function (
     PluginConfig,
     PluginBase,
+    pluginMetadata,
     ejs,
     TEMPLATES) {
     'use strict';
+
+    pluginMetadata = JSON.parse(pluginMetadata);
 
     /**
      * Initializes a new instance of Export2FORMULA.
@@ -27,46 +31,14 @@ define([
     var Export2FORMULA = function () {
         // Call base class' constructor.
         PluginBase.call(this);
+        this.pluginMetadata = pluginMetadata;
     };
 
-    // Prototypal inheritance from PluginBase.
+    Export2FORMULA.metadata = pluginMetadata;
+
+    // Prototypical inheritance from PluginBase.
     Export2FORMULA.prototype = Object.create(PluginBase.prototype);
     Export2FORMULA.prototype.constructor = Export2FORMULA;
-
-    /**
-     * Gets the name of the Export2FORMULA.
-     * @returns {string} The name of the plugin.
-     * @public
-     */
-    Export2FORMULA.prototype.getName = function () {
-        return 'Export2FORMULA';
-    };
-
-    /**
-     * Gets the semantic version (semver.org) of the Export2FORMULA.
-     * @returns {string} The version of the plugin.
-     * @public
-     */
-    Export2FORMULA.prototype.getVersion = function () {
-        return '0.1.0';
-    };
-
-    Export2FORMULA.prototype.getConfigStructure = function () {
-        return [
-            {
-                name: 'formulaVersion',
-                displayName: 'Formula version',
-                description: 'Target formula version',
-                value: '2',
-                valueType: 'string',
-                valueItems: [
-                    '1',
-                    '2'
-                ],
-                readOnly: false
-            }
-        ];
-    };
 
     /**
      * Main function for the plugin to execute. This will perform the execution.
