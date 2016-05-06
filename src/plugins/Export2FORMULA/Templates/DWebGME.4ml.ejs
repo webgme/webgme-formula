@@ -1,0 +1,120 @@
+// Project name: <%= projectName %>
+// Version     : <%= hash %>
+
+domain WebGME
+{
+  ///////////////////////
+  // WebGME primitives //
+  ///////////////////////
+
+<% if (formulaVersion === '1') { %>
+  primitive GMENode      ::= (id: String, base: String).
+  primitive GMEAttribute ::= (name:String, value:String, nodeId:String).
+  primitive GMEParent    ::= (childId: String, parentId: String).
+  primitive GMEAbstract  ::= (nodeId:String, value:Boolean).
+  primitive GMEPointer   ::= (name:String, pointsToId:String, nodeId:String).
+  primitive GMEIsMetaType::= (nodeId:String, value:Boolean).
+
+  primitive Debug ::= (String, String).
+<% } else if (formulaVersion === '2') { %>
+  GMENode      ::= new (id: String, base: String).
+  GMEAttribute ::= new (name:String, value:String, nodeId:String).
+  GMEParent    ::= new (childId: String, parentId: String).
+  GMEAbstract  ::= new (nodeId:String, value:Boolean).
+  GMEPointer   ::= new (name:String, pointsToId:String, nodeId:String).
+  GMEIsMetaType    ::= new (nodeId:String, value:Boolean).
+
+  Debug ::= new (String, String).
+<% } %>
+
+  ////////////////
+  // WebGME API //
+  ////////////////
+
+  // Inheritance
+  Base ::= (child:GMENode, base:GMENode).
+  Base(child, base) :-   child is GMENode(childId, baseId)
+                       , base is GMENode(baseId, _)
+                       .
+
+  // InheritanceTree
+  InheritanceTree ::= (child: GMENode, parent: GMENode).
+  InheritanceTree(child, parent) :-   Base(child, parent)
+                                    ; InheritanceTree(child, x)
+                                    , InheritanceTree(x, parent)
+                                    .
+
+  // Real meta
+  MetaType ::= (node: GMENode, metaNode: GMENode).
+  MetaType(node, metaNode) :-   node is GMENode
+                              , Base(node, metaNode)
+                              , IsMetaType(node, <%=formula.false%>)
+                              , IsMetaType(metaNode, <%=formula.true%>)
+                              ; MetaType(x, metaNode)
+                              , InheritanceTree(node, x)
+                              , IsMetaType(x, <%=formula.false%>)
+                              .
+
+  // Containment - Contained relationship
+  Parent ::= (childNode: GMENode, parentNode: GMENode).
+  Parent(childNode, parentNode) :-   GMEParent(childId, parentId)
+                                   , childNode is GMENode(childId, _)
+                                   , parentNode is GMENode(parentId, _)
+                                   .
+
+  // ContainmentTree
+  ContainmentTree ::= (child: GMENode, parent:GMENode).
+  ContainmentTree(child, parent) :-   Parent(child, parent)
+                                    ; ContainmentTree(child, x)
+                                    , ContainmentTree(x, parent)
+                                    .
+
+  // Abstract
+  IsAbstract ::= (GMENode, Boolean).
+  IsAbstract(node, value) :-   GMEAbstract(nodeId, value)
+                             , node is GMENode(nodeId, _)
+                             .
+
+   // IsMetaType
+   IsMetaType ::= (GMENode, Boolean).
+   IsMetaType(node, value) :-   GMEIsMetaType(nodeId, value)
+                              , node is GMENode(nodeId, _)
+                              .
+
+  // Connections
+  Connections ::= (GMENode).
+  Connections(n) :-   n is GMENode
+                    , Pointer("src", _, n)
+                    , Pointer("dst", _, n)
+                    .
+
+
+  // Attributes and Pointers
+  Attribute ::= (name:String, value:String, node:GMENode).
+  Attribute(name, value, node) :-   GMEAttribute(name, value, nodeId)
+                                  , node is GMENode(nodeId, _)
+                                  .
+
+  Pointer ::= (name:String, pointsTo:GMENode, node:GMENode).
+  Pointer(name, pointsTo, node) :-   GMEPointer(name, pointsToId, nodeId)
+                                   , node is GMENode(nodeId, _)
+                                   , pointsTo is GMENode(pointsToId, _)
+                                   .
+
+  // Basic functions: Getters
+  GetName ::= (name:String, node:GMENode).
+  GetName(name, node) :- Attribute("name", name, node).
+
+  GetNode ::= (id:String, node:GMENode).
+  GetNode(id, node) :- node is GMENode(id, _).
+
+  GetSrcNode ::= (srcNode: GMENode, connectionNode: GMENode).
+  GetSrcNode(srcNode, connNode) :-   Connections(connNode)
+                                   , Pointer("src", srcNode, connNode)
+                                   .
+
+  GetDstNode ::= (dstNode: GMENode, connectionNode: GMENode).
+  GetDstNode(dstNode, connNode) :-   Connections(connNode)
+                                   , Pointer("dst", dstNode, connNode)
+                                   .
+}

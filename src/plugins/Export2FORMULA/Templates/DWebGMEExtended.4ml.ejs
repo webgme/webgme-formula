@@ -1,0 +1,24 @@
+
+[
+  modules.WebGME = "WebGME at DWebGME.4ml"
+]
+
+
+domain DWebGMEExtended extends WebGME
+{
+<% var nodeData, i, j, keys = Object.keys(nodes);
+   for (i = 0; i < keys.length; i += 1) {
+       nodeData = nodes[keys[i]];
+       if (nodeData.isMetaType) {
+        var attributeNames = Object.keys(nodeData.jsonMeta.attributes),
+            nameAttribute  = nodeData.attributes['name'].replace(/\s+/gi,"");%>
+
+        <%= nameAttribute %> ::= new (GMENode)<%= formula.lineEnding %>
+        <%= nameAttribute %>(childNode) :-
+             metaNode is GMENode("<%=nodeData.id%>", _),
+             InheritanceTree(childNode, metaNode),
+             IsMetaType(childNode, <%=formula.false%>)<%= formula.lineEnding %>
+       <%}
+   }
+%>
+}

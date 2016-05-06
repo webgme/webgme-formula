@@ -8,18 +8,14 @@
 define([
     'plugin/PluginConfig',
     'plugin/PluginBase',
-    'text!./metadata.json',
     'common/util/ejs',
     'plugin/Export2FORMULA/Export2FORMULA/Templates/Templates'
 ], function (
     PluginConfig,
     PluginBase,
-    pluginMetadata,
     ejs,
     TEMPLATES) {
     'use strict';
-
-    pluginMetadata = JSON.parse(pluginMetadata);
 
     /**
      * Initializes a new instance of Export2FORMULA.
@@ -31,14 +27,46 @@ define([
     var Export2FORMULA = function () {
         // Call base class' constructor.
         PluginBase.call(this);
-        this.pluginMetadata = pluginMetadata;
     };
 
-    Export2FORMULA.metadata = pluginMetadata;
-
-    // Prototypical inheritance from PluginBase.
+    // Prototypal inheritance from PluginBase.
     Export2FORMULA.prototype = Object.create(PluginBase.prototype);
     Export2FORMULA.prototype.constructor = Export2FORMULA;
+
+    /**
+     * Gets the name of the Export2FORMULA.
+     * @returns {string} The name of the plugin.
+     * @public
+     */
+    Export2FORMULA.prototype.getName = function () {
+        return 'Export2FORMULA';
+    };
+
+    /**
+     * Gets the semantic version (semver.org) of the Export2FORMULA.
+     * @returns {string} The version of the plugin.
+     * @public
+     */
+    Export2FORMULA.prototype.getVersion = function () {
+        return '0.1.0';
+    };
+
+    Export2FORMULA.prototype.getConfigStructure = function () {
+        return [
+            {
+                name: 'formulaVersion',
+                displayName: 'Formula version',
+                description: 'Target formula version',
+                value: '2',
+                valueType: 'string',
+                valueItems: [
+                    '1',
+                    '2'
+                ],
+                readOnly: false
+            }
+        ];
+    };
 
     /**
      * Main function for the plugin to execute. This will perform the execution.
@@ -152,19 +180,32 @@ define([
           }
 
 
-          var templatePY = ejs.render(TEMPLATES['model.4ml.ejs'], testData);
-          var templatePY2 = ejs.render(TEMPLATES['model2.4ml.ejs'], testData);
+          var templatePY = ejs.render(TEMPLATES['DWebGME.4ml.ejs'], testData);
+          var templatePY2 = ejs.render(TEMPLATES['DWebGMEExtended.4ml.ejs'], testData);
+          var templatePY3 = ejs.render(TEMPLATES['DSpecific.4ml.ejs'], testData);
+          var templatePY4 = ejs.render(TEMPLATES['MWebGMEExtended.4ml.ejs'], testData);
+          var templatePY5 = ejs.render(TEMPLATES['T2DS.4ml.ejs'], testData);
+          var templatePY6 = ejs.render(TEMPLATES['MSpecific.4ml.ejs'], testData);
+
           //self.logger.info(templatePY);
 
           if (typeof window === 'undefined') {
             var fs = require('fs');
-            fs.writeFileSync('model.4ml', templatePY);
-            fs.writeFileSync('model2.4ml', templatePY2);
+            fs.writeFileSync('DWebGME.4ml', templatePY);
+            fs.writeFileSync('DWebGMEExtended.4ml', templatePY2);
+            fs.writeFileSync('DSpecific.4ml', templatePY3);
+            fs.writeFileSync('MWebGMEExtended.4ml', templatePY4);
+            fs.writeFileSync('T2DS.4ml', templatePY5);
+            fs.writeFileSync('MSpecific.4ml', templatePY6);
           }
 
           var files = {
-            'generatedFiles/model.4ml': templatePY,
-            'generatedFiles/model2.4ml': templatePY2
+            'generatedFiles/DWebGME.4ml': templatePY,
+            'generatedFiles/DWebGMEExtended.4ml': templatePY2,
+            'generatedFiles/DSpecific.4ml': templatePY3,
+            'generatedFiles/MWebGMEExtended.4ml': templatePY4,
+            'generatedFiles/T2DS.4ml': templatePY5,
+            'generatedFiles/MSpecific.4ml': templatePY6
           }
           var artifact = self.blobClient.createArtifact('templateFiles');
           artifact.addFiles(files, function (err) {

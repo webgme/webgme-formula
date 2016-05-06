@@ -1,0 +1,64 @@
+<% if (formulaVersion === '2') { %>
+transform T (in1::WebGME) returns (out1::WebGME)
+{
+  //out1.Debug("abstract", name) :- in1.IsAbstract(node, <%=formula.true%>), in1.GetName(name, node).
+  out1.Debug(name, metaName) :- in1.GetName(metaName, metaNode)
+                            , in1.GetName(name, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            .
+}
+
+
+transform T2 (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug("src", srcId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetSrcNode(srcNode, cNode)
+                            , in1.GetNode(srcId, srcNode)
+                            .
+  out1.Debug("dst", dstId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetDstNode(dstNode, cNode)
+                            , in1.GetNode(dstId, dstNode)
+                            .
+}
+
+transform T2_DS (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug("src", srcId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetSrcNode(srcNode, cNode)
+                            , in1.GetNode(srcId, srcNode)
+                            .
+  out1.Debug("dst", dstId) :- in1.GetNode("/817592481/w/k/V", cNode)
+                            , in1.GetDstNode(dstNode, cNode)
+                            , in1.GetNode(dstId, dstNode)
+                            .
+}
+
+transform TMetaTypes (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(nodeId, name) :- in1.GetNode(nodeId, node)
+                            , in1.IsMetaType(node, TRUE)
+                            , in1.GetName(name, node)
+                            .
+}
+
+transform TInstanceModels (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(name, metaName) :- in1.IsMetaType(node, FALSE)
+                            , in1.GetName(name, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            , in1.IsMetaType(metaNode, TRUE)
+                            , in1.GetName(metaName, metaNode)
+                            .
+}
+
+transform TInstancesOfType (in1::WebGME) returns (out1::WebGME)
+{
+  out1.Debug(name, nodeId) :- in1.IsMetaType(node, FALSE)
+                            , in1.GetName(name, node)
+                            , in1.GetNode(nodeId, node)
+                            , in1.InheritanceTree(node, metaNode)
+                            , in1.IsMetaType(metaNode, TRUE)
+                            , in1.GetName("Center", metaNode)
+                            .
+}
+<% } %>
