@@ -9,7 +9,7 @@
     "jsonld": "^0.4.2"
   },
   "peerDependencies": {
-    "webgme": "1.x"
+    "webgme": "2.x"
   },
   "devDependencies": {
     "mocha": "^2.2.5",

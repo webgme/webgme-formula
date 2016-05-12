@@ -8,14 +8,17 @@
 define([
     'plugin/PluginConfig',
     'plugin/PluginBase',
+    'text!./metadata.json',
     'common/util/ejs',
     'plugin/Export2FORMULA/Export2FORMULA/Templates/Templates'
-], function (
-    PluginConfig,
-    PluginBase,
-    ejs,
-    TEMPLATES) {
+], function (PluginConfig,
+             PluginBase,
+             pluginMetadata,
+             ejs,
+             TEMPLATES) {
     'use strict';
+
+    pluginMetadata = JSON.parse(pluginMetadata);
 
     /**
      * Initializes a new instance of Export2FORMULA.
@@ -27,7 +30,11 @@ define([
     var Export2FORMULA = function () {
         // Call base class' constructor.
         PluginBase.call(this);
+
+        this.pluginMetadata = pluginMetadata;
     };
+
+    Export2FORMULA.metadata = pluginMetadata;
 
     // Prototypal inheritance from PluginBase.
     Export2FORMULA.prototype = Object.create(PluginBase.prototype);
@@ -49,23 +56,6 @@ define([
      */
     Export2FORMULA.prototype.getVersion = function () {
         return '0.1.0';
-    };
-
-    Export2FORMULA.prototype.getConfigStructure = function () {
-        return [
-            {
-                name: 'formulaVersion',
-                displayName: 'Formula version',
-                description: 'Target formula version',
-                value: '2',
-                valueType: 'string',
-                valueItems: [
-                    '1',
-                    '2'
-                ],
-                readOnly: false
-            }
-        ];
     };
 
     /**
@@ -96,134 +86,133 @@ define([
 
         // export the entire project for now
         self.core.loadSubTree(self.rootNode, function (err, nodes) {
-          if (err) {
-            // Handle error
-            callback(err);
-            return;
-          }
-          // Here we have access to all the nodes that is contained in node
-          // at any level.
-
-          // sort nodes based on ids
-          nodes.sort(function (n1, n2) {
-            return self.core.getPath(n1).localeCompare(self.core.getPath(n2));
-          });
-
-          // First transform ejs-files into js files (needed for client-side runs) -> run Templates/combine_templates.js.
-          // See instructions in file. You must run this after any modifications to the ejs template.
-          var testData = {
-            projectName: self.projectId,
-            hash: self.commitHash,
-            domainName: self.projectName,
-            formulaVersion: self.currentConfig.formulaVersion,
-            formula: {},
-            nodes: {}
-          };
-
-          if (testData.formulaVersion === '1') {
-            testData.formula = {
-              lineEnding: '',
-              true: 'true',
-              false: 'false'
+            if (err) {
+                // Handle error
+                callback(err);
+                return;
             }
-          } else if (testData.formulaVersion === '2') {
-            testData.formula = {
-              lineEnding: '.',
-              true: 'TRUE',
-              false: 'FALSE'
-            }
-          } else {
-            // throw error
-          }
+            // Here we have access to all the nodes that is contained in node
+            // at any level.
 
+            // sort nodes based on ids
+            nodes.sort(function (n1, n2) {
+                return self.core.getPath(n1).localeCompare(self.core.getPath(n2));
+            });
 
-          var i,
-              j,
-              names,
-              thisNode,
-              thisData,
-              jsonMeta;
-
-          for (i = 0; i < nodes.length; i += 1) {
-            thisNode = nodes[i];
-            if (thisNode !== self.core.getBaseType(thisNode)) {
-              // skip anything that is not meta type
-              //continue;
-            }
-
-            jsonMeta = self.core.getJsonMeta(thisNode);
-            thisData = {
-              id: self.core.getPath(thisNode),
-              guid: self.core.getGuid(thisNode),
-              base: self.core.getPath(self.core.getBase(thisNode)),
-              meta: self.core.getPath(self.core.getBaseType(thisNode)),
-              name: self.core.getAttribute(thisNode, 'name'),
-              parent: self.core.getPath(self.core.getParent(thisNode)),
-              isAbstract: self.core.isAbstract(thisNode),
-              isMetaType: self.core.getBaseType(thisNode) === thisNode,
-              jsonMeta: jsonMeta,
-              attributes: {}, // TODO: add values
-              pointers: {} // TODO: add values
+            // First transform ejs-files into js files (needed for client-side runs) -> run Templates/combine_templates.js.
+            // See instructions in file. You must run this after any modifications to the ejs template.
+            var testData = {
+                projectName: self.projectId,
+                hash: self.commitHash,
+                domainName: self.projectName,
+                formulaVersion: self.currentConfig.formulaVersion,
+                formula: {},
+                nodes: {}
             };
-            testData.nodes[self.core.getPath(thisNode)] = thisData;
 
-            names = Object.keys(jsonMeta.attributes);
-            for (j = 0; j < names.length; j += 1) {
-              thisData.attributes[names[j]] = self.core.getAttribute(thisNode, names[j]);
+            if (testData.formulaVersion === '1') {
+                testData.formula = {
+                    lineEnding: '',
+                    true: 'true',
+                    false: 'false'
+                }
+            } else if (testData.formulaVersion === '2') {
+                testData.formula = {
+                    lineEnding: '.',
+                    true: 'TRUE',
+                    false: 'FALSE'
+                }
+            } else {
+                // throw error
             }
 
-            names = Object.keys(jsonMeta.pointers);
-            for (j = 0; j < names.length; j += 1) {
-              thisData.pointers[names[j]] = self.core.getPointerPath(thisNode, names[j]);
+            var i,
+                j,
+                names,
+                thisNode,
+                thisData,
+                jsonMeta;
+
+            for (i = 0; i < nodes.length; i += 1) {
+                thisNode = nodes[i];
+                if (thisNode !== self.core.getBaseType(thisNode)) {
+                    // skip anything that is not meta type
+                    //continue;
+                }
+
+                jsonMeta = self.core.getJsonMeta(thisNode);
+                thisData = {
+                    id: self.core.getPath(thisNode),
+                    guid: self.core.getGuid(thisNode),
+                    base: self.core.getPath(self.core.getBase(thisNode)),
+                    meta: self.core.getPath(self.core.getBaseType(thisNode)),
+                    name: self.core.getAttribute(thisNode, 'name'),
+                    parent: self.core.getPath(self.core.getParent(thisNode)),
+                    isAbstract: self.core.isAbstract(thisNode),
+                    isMetaType: self.core.getBaseType(thisNode) === thisNode,
+                    jsonMeta: jsonMeta,
+                    attributes: {}, // TODO: add values
+                    pointers: {} // TODO: add values
+                };
+                testData.nodes[self.core.getPath(thisNode)] = thisData;
+
+                names = Object.keys(jsonMeta.attributes);
+                for (j = 0; j < names.length; j += 1) {
+                    thisData.attributes[names[j]] = self.core.getAttribute(thisNode, names[j]);
+                }
+
+                names = Object.keys(jsonMeta.pointers);
+                for (j = 0; j < names.length; j += 1) {
+                    thisData.pointers[names[j]] = self.core.getPointerPath(thisNode, names[j]);
+                }
+                //console.log(jsonMeta);
             }
-            //console.log(jsonMeta);
-          }
 
+            var templatePY = ejs.render(TEMPLATES['DWebGME.4ml.ejs'], testData);
+            var templatePY2 = ejs.render(TEMPLATES['DWebGMEExtended.4ml.ejs'], testData);
+            var templatePY3 = ejs.render(TEMPLATES['DSpecific.4ml.ejs'], testData);
+            var templatePY4 = ejs.render(TEMPLATES['MWebGMEExtended.4ml.ejs'], testData);
+            var templatePY5 = ejs.render(TEMPLATES['T2DS.4ml.ejs'], testData);
+            var templatePY6 = ejs.render(TEMPLATES['MSpecific.4ml.ejs'], testData);
 
-          var templatePY = ejs.render(TEMPLATES['DWebGME.4ml.ejs'], testData);
-          var templatePY2 = ejs.render(TEMPLATES['DWebGMEExtended.4ml.ejs'], testData);
-          var templatePY3 = ejs.render(TEMPLATES['DSpecific.4ml.ejs'], testData);
-          var templatePY4 = ejs.render(TEMPLATES['MWebGMEExtended.4ml.ejs'], testData);
-          var templatePY5 = ejs.render(TEMPLATES['T2DS.4ml.ejs'], testData);
-          var templatePY6 = ejs.render(TEMPLATES['MSpecific.4ml.ejs'], testData);
+            //self.logger.info(templatePY);
 
-          //self.logger.info(templatePY);
+            if (typeof window === 'undefined') {
+                var fs = require('fs');
+                fs.writeFileSync('DWebGME.4ml', templatePY);
+                fs.writeFileSync('DWebGMEExtended.4ml', templatePY2);
+                fs.writeFileSync('DSpecific.4ml', templatePY3);
+                fs.writeFileSync('MWebGMEExtended.4ml', templatePY4);
+                fs.writeFileSync('T2DS.4ml', templatePY5);
+                fs.writeFileSync('MSpecific.4ml', templatePY6);
+            }
 
-          if (typeof window === 'undefined') {
-            var fs = require('fs');
-            fs.writeFileSync('DWebGME.4ml', templatePY);
-            fs.writeFileSync('DWebGMEExtended.4ml', templatePY2);
-            fs.writeFileSync('DSpecific.4ml', templatePY3);
-            fs.writeFileSync('MWebGMEExtended.4ml', templatePY4);
-            fs.writeFileSync('T2DS.4ml', templatePY5);
-            fs.writeFileSync('MSpecific.4ml', templatePY6);
-          }
+            var files = {
+                'generatedFiles/DWebGME.4ml': templatePY,
+                'generatedFiles/DWebGMEExtended.4ml': templatePY2,
+                'generatedFiles/DSpecific.4ml': templatePY3,
+                'generatedFiles/MWebGMEExtended.4ml': templatePY4,
+                'generatedFiles/T2DS.4ml': templatePY5,
+                'generatedFiles/MSpecific.4ml': templatePY6
+            };
 
-          var files = {
-            'generatedFiles/DWebGME.4ml': templatePY,
-            'generatedFiles/DWebGMEExtended.4ml': templatePY2,
-            'generatedFiles/DSpecific.4ml': templatePY3,
-            'generatedFiles/MWebGMEExtended.4ml': templatePY4,
-            'generatedFiles/T2DS.4ml': templatePY5,
-            'generatedFiles/MSpecific.4ml': templatePY6
-          }
-          var artifact = self.blobClient.createArtifact('templateFiles');
-          artifact.addFiles(files, function (err) {
-              if (err) {
-                  callback(err, self.result);
-                  return;
-              }
-              self.blobClient.saveAllArtifacts(function (err, hashes) {
-                  if (err) {
-                      callback(err, self.result);
-                      return;
-                  }
-                  // This will add a download hyperlink in the result-dialog.
-                  self.result.addArtifact(hashes[0]);
-                  self.result.setSuccess(true);
-                  callback(null, self.result);
-              });
-          });
+            var artifact = self.blobClient.createArtifact('templateFiles');
+            artifact.addFiles(files, function (err) {
+                if (err) {
+                    callback(err, self.result);
+                    return;
+                }
+                self.blobClient.saveAllArtifacts(function (err, hashes) {
+                    if (err) {
+                        callback(err, self.result);
+                        return;
+                    }
+                    // This will add a download hyperlink in the result-dialog.
+                    self.result.addArtifact(hashes[0]);
+                    self.result.setSuccess(true);
+                    callback(null, self.result);
+                });
+            });
         });
     };
 
