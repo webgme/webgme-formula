@@ -9,9 +9,27 @@
         "src": "src/plugins/Export2FORMULA",
         "test": "test/plugins/Export2FORMULA"
       }
+    },
+    "addons": {},
+    "decorators": {},
+    "layouts": {},
+    "seeds": {},
+    "visualizers": {
+      "FormulaEditor": {
+        "src": "panels/FormulaEditor/FormulaEditorPanel",
+        "title": "FormulaEditor",
+        "panel": "src/visualizers/panels/FormulaEditor",
+        "secondary": true,
+        "widget": "src/visualizers/widgets/FormulaEditor"
+      }
     }
   },
   "dependencies": {
-    "plugins": {}
+    "plugins": {},
+    "addons": {},
+    "decorators": {},
+    "layouts": {},
+    "seeds": {},
+    "visualizers": {}
   }
 }

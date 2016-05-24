@@ -6,6 +6,8 @@
   },
   "version": "1.0.0",
   "dependencies": {
+    "body-parser": "^1.15.1",
+    "express": "^4.13.4",
     "jsonld": "^0.4.2"
   },
   "peerDependencies": {
