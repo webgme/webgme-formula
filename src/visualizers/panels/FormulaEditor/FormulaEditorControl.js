@@ -16,7 +16,7 @@ define(['js/Constants',
     var FormulaEditorControl;
 
     FormulaEditorControl = function (options) {
-
+        var self = this;
         this._logger = options.logger.fork('Control');
 
         this._client = options.client;
@@ -29,13 +29,50 @@ define(['js/Constants',
 
         this._initWidgetEventHandlers();
 
+        // this._widget.setTitle('FormulaEditor');
+
+        //setting up UI toward the client and the territory
+        this._territoryId = this._client.addUI(self, function (events) {
+            self._eventCallback(events);
+        });
+        this._territoryPattern = {};
+        this._territoryPattern[CONSTANTS.PROJECT_ROOT_ID] = {children: 0};
+        this._client.updateTerritory(this._territoryId, this._territoryPattern);
+
         this._logger.debug('ctor finished');
     };
 
     FormulaEditorControl.prototype._initWidgetEventHandlers = function () {
-        this._widget.onNodeClick = function (id) {
-            // Change the current active object
-            WebGMEGlobal.State.registerActiveObject(id);
+        var self = this;
+
+        this._widget.onSaveConstraints = function (constraints) {
+            self._client.setAttributes(CONSTANTS.PROJECT_ROOT_ID, '_formulaConstraints', constraints);
+        };
+
+        this._widget.onCheckConstraints = function (constraints) {
+            self._widget.waitForResults();
+            var pluginContext = self._client.getCurrentPluginContext('Export2FORMULA', CONSTANTS.PROJECT_ROOT_ID);
+
+            self._client.runBrowserPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
+                if (err) {
+                    self._logger.error(err);
+                    return;
+                }
+
+                pluginContext = self._client.getCurrentPluginContext('CheckFORMULA', CONSTANTS.PROJECT_ROOT_ID);
+
+                //setting config parameters
+                pluginContext.pluginConfig = {
+                    formulaModule: pluginResult.artifacts[0],
+                    constraints: constraints.join(" ")
+                };
+
+                self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err/*, pluginResult*/) {
+                    if (err) {
+                        self._logger.error(err);
+                    }
+                });
+            });
         };
     };
 
@@ -44,69 +81,83 @@ define(['js/Constants',
     // defines the parts of the project that the visualizer is interested in
     // (this allows the browser to then only load those relevant parts).
     FormulaEditorControl.prototype.selectedObjectChanged = function (nodeId) {
-        var desc = this._getObjectDescriptor(nodeId),
-            self = this;
+        // var desc = this._getObjectDescriptor(nodeId),
+        //     self = this;
+        //
+        // self._logger.debug('activeObject nodeId \'' + nodeId + '\'');
+        //
+        // // Remove current territory patterns
+        // if (self._currentNodeId) {
+        //     self._client.removeUI(self._territoryId);
+        // }
+        //
+        // self._currentNodeId = nodeId;
+        // self._currentNodeParentId = undefined;
+        //
+        // if (typeof self._currentNodeId === 'string') {
+        //     // Put new node's info into territory rules
+        //     self._selfPatterns = {};
+        //     self._selfPatterns[nodeId] = {children: 0};  // Territory "rule"
+        //
+        //     self._widget.setTitle(desc.name.toUpperCase());
+        //
+        //     if (typeof desc.parentId === 'string') {
+        //         self.$btnModelHierarchyUp.show();
+        //     } else {
+        //         self.$btnModelHierarchyUp.hide();
+        //     }
+        //
+        //     self._currentNodeParentId = desc.parentId;
+        //
+        //     self._territoryId = self._client.addUI(self, function (events) {
+        //         self._eventCallback(events);
+        //     });
+        //
+        //     // Update the territory
+        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
+        //
+        //     self._selfPatterns[nodeId] = {children: 1};
+        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
+        // }
+    };
 
-        self._logger.debug('activeObject nodeId \'' + nodeId + '\'');
+    FormulaEditorControl.prototype._refreshConstraints = function () {
+        var node = this._client.getNode(CONSTANTS.PROJECT_ROOT_ID);
 
-        // Remove current territory patterns
-        if (self._currentNodeId) {
-            self._client.removeUI(self._territoryId);
-        }
-
-        self._currentNodeId = nodeId;
-        self._currentNodeParentId = undefined;
-
-        if (typeof self._currentNodeId === 'string') {
-            // Put new node's info into territory rules
-            self._selfPatterns = {};
-            self._selfPatterns[nodeId] = {children: 0};  // Territory "rule"
-
-            self._widget.setTitle(desc.name.toUpperCase());
-
-            if (typeof desc.parentId === 'string') {
-                self.$btnModelHierarchyUp.show();
-            } else {
-                self.$btnModelHierarchyUp.hide();
-            }
-
-            self._currentNodeParentId = desc.parentId;
-
-            self._territoryId = self._client.addUI(self, function (events) {
-                self._eventCallback(events);
-            });
-
-            // Update the territory
-            self._client.updateTerritory(self._territoryId, self._selfPatterns);
-
-            self._selfPatterns[nodeId] = {children: 1};
-            self._client.updateTerritory(self._territoryId, self._selfPatterns);
+        if (node) {
+            this._widget.setConstraints(node.getAttribute('_formulaConstraints') || "");
+        } else {
+            this._widget.setConstraints('');
         }
     };
 
-    // This next function retrieves the relevant node information for the widget
-    FormulaEditorControl.prototype._getObjectDescriptor = function (nodeId) {
-        var nodeObj = this._client.getNode(nodeId),
-            objDescriptor;
+    FormulaEditorControl.prototype._getSimpleResults = function () {
+        // this._widget.setResults('checking');
+        // now we check if we have results
+        var self = this,
+            project = self._client.getProjectObject(),
+            rootNode = self._client.getNode(CONSTANTS.PROJECT_ROOT_ID),
+            formulaInfo;
 
-        if (nodeObj) {
-            objDescriptor = {
-                id: undefined,
-                name: undefined,
-                childrenIds: undefined,
-                parentId: undefined,
-                isConnection: false
-            };
+        this._widget.setResults({}); //initializing results
 
-            objDescriptor.id = nodeObj.getId();
-            objDescriptor.name = nodeObj.getAttribute(nodePropertyNames.Attributes.name);
-            objDescriptor.childrenIds = nodeObj.getChildrenIds();
-            objDescriptor.childrenNum = objDescriptor.childrenIds.length;
-            objDescriptor.parentId = nodeObj.getParentId();
-            objDescriptor.isConnection = GMEConcepts.isConnection(nodeId);  // GMEConcepts can be helpful
+        if (rootNode) {
+            formulaInfo = rootNode.getAttribute('_formulaInfo');
+            if (formulaInfo && typeof formulaInfo.originCommitHash === 'string' &&
+                Object.keys(formulaInfo.simpleCheckResults || {}).length !== 0) {
+                // we have results and a possible origin commit hash so let's check it out
+                project.loadObject(self._client.getActiveCommitHash(), function (err, commitObj) {
+                    if (err) {
+                        self._logger.error(err);
+                    } else {
+                        if (commitObj.parents && commitObj.parents.indexOf(formulaInfo.originCommitHash) > -1 &&
+                            commitObj.parents.length === 1) {
+                            self._widget.setResults(formulaInfo.simpleCheckResults);
+                        }
+                    }
+                });
+            }
         }
-
-        return objDescriptor;
     };
 
     /* * * * * * * * Node Event Handling * * * * * * * */
@@ -137,31 +188,36 @@ define(['js/Constants',
     };
 
     FormulaEditorControl.prototype._onLoad = function (gmeId) {
-        var description = this._getObjectDescriptor(gmeId);
-        this._widget.addNode(description);
+        this._refreshConstraints();
+        this._getSimpleResults();
     };
 
     FormulaEditorControl.prototype._onUpdate = function (gmeId) {
-        var description = this._getObjectDescriptor(gmeId);
-        this._widget.updateNode(description);
+        this._refreshConstraints();
+        this._getSimpleResults();
     };
 
     FormulaEditorControl.prototype._onUnload = function (gmeId) {
-        this._widget.removeNode(gmeId);
+        this._logger.error('Project root cannot be removed!!!');
     };
 
     FormulaEditorControl.prototype._stateActiveObjectChanged = function (model, activeObjectId) {
-        // if (this._currentNodeId === activeObjectId) {
-        //     // The same node selected as before - do not trigger
-        // } else {
-        //     this.selectedObjectChanged(activeObjectId);
-        // }
+        if (this._currentNodeId === activeObjectId) {
+            // The same node selected as before - do not trigger
+        } else {
+            this.selectedObjectChanged(activeObjectId);
+        }
     };
 
     /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
     FormulaEditorControl.prototype.destroy = function () {
-        // this._detachClientEventListeners();
+        this._detachClientEventListeners();
         // this._removeToolbarItems();
+
+        if (this._territoryId) {
+            this._client.removeUI(this._territoryId);
+            this._territoryId = null;
+        }
     };
 
     FormulaEditorControl.prototype._attachClientEventListeners = function () {
@@ -174,18 +230,18 @@ define(['js/Constants',
     };
 
     FormulaEditorControl.prototype.onActivate = function () {
-        // this._attachClientEventListeners();
+        this._attachClientEventListeners();
         // this._displayToolbarItems();
-        //
-        // if (typeof this._currentNodeId === 'string') {
-        //     WebGMEGlobal.State.registerSuppressVisualizerFromNode(true);
-        //     WebGMEGlobal.State.registerActiveObject(this._currentNodeId);
-        //     WebGMEGlobal.State.registerSuppressVisualizerFromNode(false);
-        // }
+
+        if (typeof this._currentNodeId === 'string') {
+            WebGMEGlobal.State.registerSuppressVisualizerFromNode(true);
+            WebGMEGlobal.State.registerActiveObject(this._currentNodeId);
+            WebGMEGlobal.State.registerSuppressVisualizerFromNode(false);
+        }
     };
 
     FormulaEditorControl.prototype.onDeactivate = function () {
-        // this._detachClientEventListeners();
+        this._detachClientEventListeners();
         // this._hideToolbarItems();
     };
 

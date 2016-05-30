@@ -9,5 +9,7 @@ config.server.port = 8228;
 
 //config.requirejsPaths.jsonld = './node_modules/jsonld/js/jsonld';
 
+config.plugin.allowServerExecution = true;
+
 validateConfig(config);
 module.exports = config;

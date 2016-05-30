@@ -8,6 +8,10 @@
       "Export2FORMULA": {
         "src": "src/plugins/Export2FORMULA",
         "test": "test/plugins/Export2FORMULA"
+      },
+      "CheckFORMULA": {
+        "src": "src/plugins/CheckFORMULA",
+        "test": "test/plugins/CheckFORMULA"
       }
     },
     "addons": {},
@@ -19,7 +23,7 @@
         "src": "panels/FormulaEditor/FormulaEditorPanel",
         "title": "FormulaEditor",
         "panel": "src/visualizers/panels/FormulaEditor",
-        "secondary": true,
+        "secondary": false,
         "widget": "src/visualizers/widgets/FormulaEditor"
       }
     }

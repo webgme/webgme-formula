@@ -6,7 +6,11 @@ function dockerCommand(options) {
     var childProcess = require('child_process');
     return {
         cp: function (src, dst) {
-            return childProcess.execSync('docker cp ' + src + ' ' + dst, options.cmd);
+            try {
+                return childProcess.execSync('docker cp ' + src + ' ' + dst, options.cmd);
+            } catch (e) {
+                // TODO do we need error handling here???
+            }
         },
         start: function () {
             return childProcess.execSync('docker run -d -i ' + options.imageId, options.cmd);
@@ -35,14 +39,15 @@ function dockerTasker(options) {
                     DOCKER_CERT_PATH: '/Users/tamaskecskes/.docker/machine/machines/default'
                 }
             },
-            executable: 'CommandLine.exe -list -exit',
+            executable: 'Query.exe -f model.4ml -c constraints.json',
             imageId: '4ml'
         }),
-        moveArtifacts = function (containerId, artifactHashes, callback) {
+        moveArtifacts = function (containerId, formulaModule, constraints, callback) {
             queue.push({
                 id: containerId,
                 type: 'setup',
-                hashes: artifactHashes,
+                module: formulaModule,
+                constraints: constraints,
                 cb: callback
             });
         },
@@ -63,16 +68,18 @@ function dockerTasker(options) {
 
             if (task.type === 'setup') {
                 // TODO download the assets
+                fs.writeFileSync('model.4ml', task.module);
                 cmd.cp('model.4ml', task.id + ':usr/app/model.4ml');
-                cmd.cp('constraints.4ml', task.id + ':usr/app/constraints.4ml');
+                fs.writeFileSync('constraints.json', JSON.stringify(task.constraints, null, 2));
+                cmd.cp('constraints.json', task.id + ':usr/app/constraints.json');
                 working = false;
                 task.cb();
             } else {
-                // TODO create result
-                //cmd.cp(task.id + ':usr/app/result.json', 'result.json');
+                cmd.cp(task.id + ':usr/app/queryresults.json', 'queryresults.json');
+                cmd.stop(task.id);
                 working = false;
-                //task.cb(null, JSON.parse(fs.readFileSync('result.json', 'utf8')));
-                task.cb(null, {});
+                task.cb(null, JSON.parse(fs.readFileSync('queryresults.json', 'utf8') || '{}'));
+                // task.cb(null, {});
             }
         }
     }, options.checkInterval || 10);
@@ -81,7 +88,7 @@ function dockerTasker(options) {
         // TODO handlling parameters
         var containerId = cmd.start().substr(0, 12);
 
-        moveArtifacts(containerId, [], function (err) {
+        moveArtifacts(containerId, task.module, task.constraints, function (err) {
             cmd.run(containerId, function (err) {
                 getResult(containerId, callback);
             });
@@ -100,23 +107,23 @@ __docker_rest.use(bodyParser.json());
 __docker_rest.post('/4ml', function (req, res) {
     if (req && req.body) {
         __dockerTasker(req.body, function (err, result) {
-            res.send(200, result);
+            if (err) {
+                res.status(500).send(e);
+            } else {
+                res.status(200).send(result);
+            }
         });
-    }
-});
 
-__docker_rest.get('*', function (req, res) {
-    console.log('do not get it :D ');
-    res.send(400);
+    }
 });
 
 __httpServer = require('http').createServer(__docker_rest);
 
 __httpServer.on('connection', function (socket) {
-    console.log('someone just connected');
+    // console.log('someone just connected');
 });
 __httpServer.on('secureConnection', function (socket) {
-    console.log('someone just securely connected');
+    // console.log('someone just securely connected');
 });
 
 __httpServer.on('clientError', function (err, socket) {
@@ -124,7 +131,7 @@ __httpServer.on('clientError', function (err, socket) {
 });
 
 __httpServer.on('error', function (err) {
-    console.error('whaaat?', err);
+    // console.error('whaaat?', err);
 });
 
 __httpServer.listen(9009, function (err) {
