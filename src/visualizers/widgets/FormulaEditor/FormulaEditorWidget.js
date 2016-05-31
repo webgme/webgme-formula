@@ -7,12 +7,14 @@
 
 define([
     './FormulaCodeMirrorMode',
-    'js/Loader/LoaderCircles'
-], function (CodeMirror, LoaderCircles) {
+    'js/Loader/LoaderCircles',
+    'text!./FormulaEditor.html'
+], function (CodeMirror, LoaderCircles, FormulaEditorHtml) {
     'use strict';
 
     var FormulaEditorWidget,
-        WIDGET_CLASS = 'formula-editor';
+        WIDGET_CLASS = 'formula-editor',
+        cmPercent = '85%'
 
     // TODO check if regular expression is correct and if it is fine here - no other users
     function getConstraintNamesFromText(txt) {
@@ -26,7 +28,6 @@ define([
         this._logger = logger.fork('Widget');
 
         this._el = container;
-        this._editorEl = null;
         this._codeMirrorEl = null;
         this._listEl = null;
         this._initialize();
@@ -46,13 +47,14 @@ define([
             'padding': '0'
         });
 
+        this._el.append(FormulaEditorHtml);
+
+        this._codeMirrorEl = this._el.find('#codearea').first();
         // Create a dummy header 
         // this._el.append('<h3>FormulaEditor</h3>');
         // this.setTitle('FormulaEditor');
 
-        this._editorEl = $('<div class="col-sm-9">');
-        this._codeMirrorEl = $('<textarea>');
-        this._saveConstraintsBtn = $('<button type="button" class="btn btn-default">Save</button>');
+        this._saveConstraintsBtn = this._el.find('#constraintBtn').first();
 
         this._saveConstraintsBtn.on('click', function (/*event*/) {
             self._previousCodeState = self._codemirror.getValue();
@@ -61,12 +63,8 @@ define([
             self.setResults({}); // constraints probably changed so we clear the results
         });
 
-        this._editorEl.append(this._codeMirrorEl);
-        this._editorEl.append(this._saveConstraintsBtn);
-        this._el.append(this._editorEl);
-
         this._codeMirrorEl.focus();
-        this._codemirror = CodeMirror.fromTextArea(this._codeMirrorEl[0], {
+        this._codemirror = CodeMirror.fromTextArea(this._codeMirrorEl.get(0), {
             lineNumbers: true,
             theme: 'monokai',
             matchBrackets: true,
@@ -74,10 +72,12 @@ define([
                 name: 'formula',
                 globalVars: true
             },
-            dragDrop: true,
-            inputStyle: 'textarea'
+            dragDrop: true
         });
 
+        $(this._el).find('.CodeMirror').css({
+            height: cmPercent
+        });
         this._codemirror.on('change', function () {
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
@@ -104,22 +104,15 @@ define([
         this._autoSaveTimer = null;
         this._previousCodeState = null;
 
-        this._listEl = $('<div class="col-sm-2">');
+        this._listEl = this._el.find('#listarea').first();
 
-        this._constraintList = $('<ul class="list-group"><li class="list-group-item">Item' +
-            '<span class="badge"><span class="glyphicon glyphicon-ok-sign"/></span></li></ul>');
-        this._checkContraintsBtn = $('<button type="button" ' +
-            'class="btn btn-default">Check constraints</button>');
+        this._constraintList = this._el.find('#constraintlist').first();
+        this._checkContraintsBtn = this._el.find('#checkBtn').first();
 
         this._checkContraintsBtn.on('click', function (event) {
             self.onCheckConstraints(getConstraintNamesFromText(self._codemirror.getValue()));
         });
         self._saveConstraintsBtn.attr('disabled', true);
-
-        this._listEl.append(this._constraintList);
-        this._listEl.append(this._checkContraintsBtn);
-
-        this._el.append(this._listEl);
 
         this._codemirror.refresh();
 
@@ -128,6 +121,8 @@ define([
 
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
         this._logger.debug('Widget is resizing...');
+        this._codemirror.focus();
+        this._codemirror.refresh();
     };
 
     // Auto-save functions
@@ -167,8 +162,8 @@ define([
         // setting code from outside so the auto-save should not be triggered
         this._previousCodeState = text;
         if (text !== this._codemirror.getValue()) {
-            // this._codemirror.setValue(text);
-            this._codemirror.swapDoc(new CodeMirror.Doc(text));
+            this._codemirror.setValue(text);
+            // this._codemirror.swapDoc(new CodeMirror.Doc(text));
             this._codemirror.refresh();
             console.log(this._codemirror.hasFocus());
             this._codemirror.focus();
