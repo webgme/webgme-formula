@@ -18,10 +18,20 @@ define([
 
     // TODO check if regular expression is correct and if it is fine here - no other users
     function getConstraintNamesFromText(txt) {
-        var regExp = /\w+(?= *:-.*\.)/g,
+        var regExp = /\w+(?= *:-[\s\S]*\.)/g,
             result = txt.match(regExp);
 
         return result || [];
+    }
+
+    function getConstraintResultElem(name, result) {
+        if (result === true) {
+            return $('<li class="clist-elem clist-true"><i class="glyphicon glyphicon-ok"/>' + name + '</li>');
+        } else if (result === false) {
+            return $('<li class="clist-elem clist-false"><i class="glyphicon glyphicon-remove"/>' + name + '</li>');
+        } else {
+            return $('<li class="clist-elem">' + name + '</li>');
+        }
     }
 
     FormulaEditorWidget = function (logger, container) {
@@ -89,15 +99,15 @@ define([
         });
 
         this._codemirror.on('drop', function (cm, event) {
-            console.log('dropping', event);
+            // console.log('dropping', event);
         });
 
         this._codemirror.on('update', function (cm) {
-            console.log('update', cm);
+            // console.log('update', cm);
         });
 
         this._codemirror.on('focus', function (cm) {
-            console.log('focused', cm.getValue());
+            // console.log('focused', cm.getValue());
         });
 
         this._autoSaveInterval = 10000; //1s autoSave - if change happened
@@ -113,6 +123,10 @@ define([
             self.onCheckConstraints(getConstraintNamesFromText(self._codemirror.getValue()));
         });
         self._saveConstraintsBtn.attr('disabled', true);
+
+        this._allOk = this._el.find('#allResultOk').first();
+        this._allOk.hide();
+        this._allOk.attr('disabled', true);
 
         this._codemirror.refresh();
 
@@ -160,39 +174,40 @@ define([
 
     FormulaEditorWidget.prototype.setConstraints = function (text) {
         // setting code from outside so the auto-save should not be triggered
+        var cursor;
         this._previousCodeState = text;
         if (text !== this._codemirror.getValue()) {
+            cursor = this._codemirror.getCursor();
             this._codemirror.setValue(text);
-            // this._codemirror.swapDoc(new CodeMirror.Doc(text));
             this._codemirror.refresh();
-            console.log(this._codemirror.hasFocus());
-            this._codemirror.focus();
-            console.log(this._codemirror.hasFocus());
+            this._codemirror.setCursor(cursor);
             this.setResults({}); //something is changed so we clear the results, just to be on the safe side
         }
     };
 
     FormulaEditorWidget.prototype.setResults = function (resultObject) {
         var constraints = getConstraintNamesFromText(this._codemirror.getValue()).sort(),
-            i;
+            i,
+            allOk = true;
         this._loader.stop();
         this._constraintList.empty();
         for (i = 0; i < constraints.length; i += 1) {
             if (typeof resultObject[constraints[i]] === 'boolean') {
                 if (resultObject[constraints[i]]) {
-                    this._constraintList.append($('<li class="list-group-item list-group-item-success list">' +
-                        constraints[i] +
-                        '<span class="badge"><span class="glyphicon glyphicon-ok-sign"/></span></li>'));
+                    this._constraintList.append(getConstraintResultElem(constraints[i], true));
                 } else {
-                    this._constraintList.append($('<li class="list-group-item list-group-item-danger">' +
-                        constraints[i] +
-                        '<span class="badge"><span class="glyphicon glyphicon-remove-sign"/></span></li>'));
+                    allOk = false;
+                    this._constraintList.append(getConstraintResultElem(constraints[i], false));
                 }
             } else {
-                this._constraintList.append($('<li class="list-group-item list-group-item-info">' +
-                    constraints[i] +
-                    '<span class="badge"><span class="glyphicon glyphicon-question-sign"/></span></li>'));
+                allOk = false;
+                this._constraintList.append(getConstraintResultElem(constraints[i]));
             }
+        }
+        if (allOk) {
+            this._allOk.show();
+        } else {
+            this._allOk.hide();
         }
     };
 

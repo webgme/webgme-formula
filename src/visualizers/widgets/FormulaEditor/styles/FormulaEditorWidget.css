@@ -7,4 +7,46 @@
  */
 
 .formula-editor {
-  outline: none; }
+    outline: none;
+}
+
+.formula-editor .btn-group {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.formula-editor .toolbar-button {
+    display: inline-block;
+    position: relative;
+}
+
+.formula-editor .btn {
+    padding: 0px;
+}
+
+.formula-editor .dropdown-menu {
+    min-width: auto;
+}
+
+.formula-editor .clist-elem {
+    white-space: nowrap;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.formula-editor .clist-true {
+    background-color: #00A000;
+}
+
+.formula-editor .clist-false {
+    background-color: #A00000;
+}
+
+.formula-editor .dropdown-menu {
+    padding: 0px;
+    border: none;
+}
+
+.formula-editor .all-ok {
+    color: #008000;
+}

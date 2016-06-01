@@ -70,12 +70,12 @@ define([
                 }
 
                 //:- Rules
-                //var ruleRegex = new RegExp("(.+?)\\s*:-", "");
-                //var matches = stream.match(ruleRegex, false);
-                //if (matches != null) {
-                //    stream.match(matches[1], true);
-                //    return "def";
-                //}
+                var ruleRegex = /(\w+?) *:-/; //new RegExp("(.+?)\\s*:-", "");
+                var matches = stream.match(ruleRegex, false);
+                if (matches != null) {
+                    stream.match(matches[1], true);
+                    return "def";
+                }
 
                 //Keywords
                 for (var i = 0; i < keywords.length; i++) {

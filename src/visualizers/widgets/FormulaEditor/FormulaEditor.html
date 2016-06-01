@@ -1,12 +1,33 @@
 <div id="FORMULA_EDITOR_DIV" style="position:absolute; background-color: white; width: 100%; height: 100%">
-    <h2 style="margin: 0">Formula Editor
-        <button id="constraintBtn" type="button" class="btn btn-sm btn-default">Save</button>
-        <button id="checkBtn" type="button" class="btn btn-sm btn-default">Check</button>
-    </h2>
-    <div class="col-sm-9" style="height: 100%">
-        <textarea id="codearea" autofocus></textarea>
+    <div class="btn-group">
+        Formula Editor
+        <div class="toolbar-button">
+            <a id="constraintBtn" class="btn btn-mini">
+                <i class="glyphicon glyphicon-floppy-disk"></i>
+            </a>
+        </div>
+        <div class="toolbar-button">
+            <a id="checkBtn" class="btn btn-min">
+                <i class="glyphicon glyphicon-dashboard"></i>
+            </a>
+        </div>
+        <div class="toolbar-button">
+            <a class="btn btn-mini dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
+               aria-expanded="false">
+                <i class="glyphicon glyphicon-list-alt"></i>
+                <span class="caret"></span>
+            </a>
+            <ul id="constraintlist" class="dropdown-menu">
+            </ul>
+        </div>
+        <div class="toolbar-button">
+            <a class="btn btn-mini all-ok" id="allResultOk">
+                <i class="glyphicon glyphicon-ok"></i>
+            </a>
+        </div>
     </div>
-    <div id="listarea" class="col-sm-2" style="height: 100%">
-        <ul id="constraintlist" class="list-group"></ul>
+    <textarea id="codearea"></textarea>
+    <div id="listarea" style="height: 100px">
+        <ul class="list-group"></ul>
     </div>
 </div>

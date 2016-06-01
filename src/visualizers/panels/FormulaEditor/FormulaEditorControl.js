@@ -58,7 +58,7 @@ define(['js/Constants',
                     self._logger.error(err);
                     return;
                 }
-
+            
                 pluginContext = self._client.getCurrentPluginContext('CheckFORMULA', CONSTANTS.PROJECT_ROOT_ID);
 
                 //setting config parameters

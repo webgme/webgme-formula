@@ -1,3 +1,4 @@
+/*jshint node:true, camelcase:false*/
 /**
  * @author kecso / https://github.com/kecso
  */
@@ -29,19 +30,7 @@ function dockerTasker(options) {
     var working = false,
         queue = [],
         fs = require('fs'),
-        cmd = new dockerCommand({
-            cmd: {
-                encoding: 'utf8',
-                env: {
-                    DOCKER_HOST: 'tcp://192.168.99.100:2376',
-                    DOCKER_MACHINE_NAME: 'default',
-                    DOCKER_TLS_VERIFY: 1,
-                    DOCKER_CERT_PATH: '/Users/tamaskecskes/.docker/machine/machines/default'
-                }
-            },
-            executable: 'Query.exe -f model.4ml -c constraints.json',
-            imageId: '4ml'
-        }),
+        cmd = new dockerCommand(config),
         moveArtifacts = function (containerId, formulaModule, constraints, callback) {
             queue.push({
                 id: containerId,
@@ -60,7 +49,8 @@ function dockerTasker(options) {
         };
 
     setInterval(function () {
-        var task;
+        var task,
+            result;
 
         if (!working && queue.length > 0) {
             working = true;
@@ -70,15 +60,19 @@ function dockerTasker(options) {
                 // TODO download the assets
                 fs.writeFileSync('model.4ml', task.module);
                 cmd.cp('model.4ml', task.id + ':usr/app/model.4ml');
+                fs.unlinkSync('model.4ml');
                 fs.writeFileSync('constraints.json', JSON.stringify(task.constraints, null, 2));
                 cmd.cp('constraints.json', task.id + ':usr/app/constraints.json');
+                fs.unlinkSync('constraints.json');
                 working = false;
                 task.cb();
             } else {
                 cmd.cp(task.id + ':usr/app/queryresults.json', 'queryresults.json');
+                result = JSON.parse(fs.readFileSync('queryresults.json', 'utf8') || '{}');
+                fs.unlinkSync('queryresults.json');
                 cmd.stop(task.id);
                 working = false;
-                task.cb(null, JSON.parse(fs.readFileSync('queryresults.json', 'utf8') || '{}'));
+                task.cb(null, result);
                 // task.cb(null, {});
             }
         }
@@ -99,8 +93,16 @@ function dockerTasker(options) {
 var Express = require('express'),
     bodyParser = require('body-parser'),
     __docker_rest = new Express(),
-    __dockerTasker = new dockerTasker({}),
-    __httpServer;
+    __dockerTasker,
+    __httpServer,
+    config = require('./docker.config');
+
+// TODO better configuration support
+if (typeof config !== 'object' || !config.cmd) {
+    console.error('there is no configuration file!!!');
+    process.exit(1);
+}
+__dockerTasker = new dockerTasker({});
 
 __docker_rest.use(bodyParser.json());
 
@@ -120,10 +122,8 @@ __docker_rest.post('/4ml', function (req, res) {
 __httpServer = require('http').createServer(__docker_rest);
 
 __httpServer.on('connection', function (socket) {
-    // console.log('someone just connected');
 });
 __httpServer.on('secureConnection', function (socket) {
-    // console.log('someone just securely connected');
 });
 
 __httpServer.on('clientError', function (err, socket) {
@@ -131,10 +131,9 @@ __httpServer.on('clientError', function (err, socket) {
 });
 
 __httpServer.on('error', function (err) {
-    // console.error('whaaat?', err);
 });
 
-__httpServer.listen(9009, function (err) {
+__httpServer.listen(config.port, function (err) {
     if (err) {
         console.error('docker 4ml sevrer cannot be started', err);
         process.exit(1);
