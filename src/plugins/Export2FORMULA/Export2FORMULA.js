@@ -71,7 +71,8 @@ define([
         // Use self to access core, project, result, logger etc from PluginBase.
         // These are all instantiated at this point.
         var self = this,
-            nodeObject;
+            nodeObject,
+            artifact;
 
         self.currentConfig = self.getCurrentConfig();
         // Using the logger.
@@ -107,6 +108,7 @@ define([
                 domainName: self.projectName,
                 formulaVersion: self.currentConfig.formulaVersion,
                 formula: {},
+                userDefinedConstraints: self.core.getAttribute(self.rootNode, '_formulaConstraints'),
                 nodes: {}
             };
 
@@ -174,45 +176,60 @@ define([
             var templatePY4 = ejs.render(TEMPLATES['MWebGMEExtended.4ml.ejs'], testData);
             var templatePY5 = ejs.render(TEMPLATES['T2DS.4ml.ejs'], testData);
             var templatePY6 = ejs.render(TEMPLATES['MSpecific.4ml.ejs'], testData);
+            var templateC = ejs.render(TEMPLATES['DConstraint.4ml.ejs'], testData);
 
             //self.logger.info(templatePY);
 
-            if (typeof window === 'undefined') {
-                var fs = require('fs');
-                fs.writeFileSync('DWebGME.4ml', templatePY);
-                fs.writeFileSync('DWebGMEExtended.4ml', templatePY2);
-                fs.writeFileSync('DSpecific.4ml', templatePY3);
-                fs.writeFileSync('MWebGMEExtended.4ml', templatePY4);
-                fs.writeFileSync('T2DS.4ml', templatePY5);
-                fs.writeFileSync('MSpecific.4ml', templatePY6);
-            }
-
-            var files = {
-                'generatedFiles/DWebGME.4ml': templatePY,
-                'generatedFiles/DWebGMEExtended.4ml': templatePY2,
-                'generatedFiles/DSpecific.4ml': templatePY3,
-                'generatedFiles/MWebGMEExtended.4ml': templatePY4,
-                'generatedFiles/T2DS.4ml': templatePY5,
-                'generatedFiles/MSpecific.4ml': templatePY6
-            };
-
-            var artifact = self.blobClient.createArtifact('templateFiles');
-            artifact.addFiles(files, function (err) {
-                if (err) {
-                    callback(err, self.result);
-                    return;
+            if (self.currentConfig.includeConstraints !== true) {
+                if (typeof window === 'undefined') {
+                    var fs = require('fs');
+                    fs.writeFileSync('DWebGME.4ml', templatePY);
+                    fs.writeFileSync('DWebGMEExtended.4ml', templatePY2);
+                    fs.writeFileSync('DSpecific.4ml', templatePY3);
+                    fs.writeFileSync('MWebGMEExtended.4ml', templatePY4);
+                    fs.writeFileSync('T2DS.4ml', templatePY5);
+                    fs.writeFileSync('MSpecific.4ml', templatePY6);
                 }
-                self.blobClient.saveAllArtifacts(function (err, hashes) {
+
+                var files = {
+                    'generatedFiles/DWebGME.4ml': templatePY,
+                    'generatedFiles/DWebGMEExtended.4ml': templatePY2,
+                    'generatedFiles/DSpecific.4ml': templatePY3,
+                    'generatedFiles/MWebGMEExtended.4ml': templatePY4,
+                    'generatedFiles/T2DS.4ml': templatePY5,
+                    'generatedFiles/MSpecific.4ml': templatePY6
+                };
+
+                artifact = self.blobClient.createArtifact('templateFiles');
+                artifact.addFiles(files, function (err) {
                     if (err) {
                         callback(err, self.result);
                         return;
                     }
-                    // This will add a download hyperlink in the result-dialog.
-                    self.result.addArtifact(hashes[0]);
+                    self.blobClient.saveAllArtifacts(function (err, hashes) {
+                        if (err) {
+                            callback(err, self.result);
+                            return;
+                        }
+                        // This will add a download hyperlink in the result-dialog.
+                        self.result.addArtifact(hashes[0]);
+                        self.result.setSuccess(true);
+                        callback(null, self.result);
+                    });
+                });
+            } else {
+                self.blobClient.putFile('model.4ml', templateC, function (err, hash) {
+                    if (err) {
+                        callback(err, self.result);
+                        return;
+                    }
+
+                    self.result.addArtifact(hash);
                     self.result.setSuccess(true);
                     callback(null, self.result);
                 });
-            });
+            }
+
         });
     };
 

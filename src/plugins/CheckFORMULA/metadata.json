@@ -1,0 +1,41 @@
+{
+  "id": "CheckFORMULA",
+  "name": "CheckFORMULA",
+  "version": "0.1.0",
+  "description": "This plugin got a 4ml file with constraints and it will send them in a POST request to a preconfigured FORMULA machine for chekcing.",
+  "icon": {
+    "class": "glyphicon glyphicon-cog",
+    "src": ""
+  },
+  "disableServerSideExecution": false,
+  "disableBrowserSideExecution": true,
+  "writeAccessRequired": false,
+  "configStructure": [
+    {
+      "name": "formulaModule",
+      "displayName": "Input Formula module",
+      "description": "A Formula module that contains the generated domains and the user defined constraints as well",
+      "value": "",
+      "valueType": "asset",
+      "readOnly": false
+    },
+    {
+      "name": "formulaMachine",
+      "displayName": "Access URL to the Formula machine",
+      "description": "A URL that point to the formula machine where the checking can be done.",
+      "value": "http://localhost:9009/4ml",
+      "valueType": "string",
+      "readOnly": false
+    },
+    {
+      "name": "constraints",
+      "displayName": "Constraints to check",
+      "regex": "^[a-zA-Z_ ]+$",
+      "regexMessage": "The text should be a space separated list of strings",
+      "description": "Which user defined constraints should be checked.",
+      "value": "",
+      "valueType": "string",
+      "readOnly": false
+    }
+  ]
+}

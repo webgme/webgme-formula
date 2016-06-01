@@ -11,12 +11,19 @@ var config = require('webgme/config/config.default'),
 config.plugin.basePaths.push('src/plugins');
 
 
+
+config.visualization.panelPaths.push('src/visualizers/panels');
+
+
 // Visualizer descriptors
-
+config.visualization.visualizerDescriptors.push('./src/visualizers/Visualizers.json');
 // Add requirejs paths
+config.requirejsPaths = {
+  'panels': './src/visualizers/panels',
+  'widgets': './src/visualizers/widgets'
+};
 
 
-
-config.mongo.uri = 'mongodb://127.0.0.1:27017/webgme_formula';
+config.mongo.uri = 'mongodb://127.0.0.1:27017/formula';
 validateConfig(config);
 module.exports = config;

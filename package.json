@@ -6,7 +6,10 @@
   },
   "version": "1.0.0",
   "dependencies": {
-    "jsonld": "^0.4.2"
+    "body-parser": "^1.15.1",
+    "express": "^4.13.4",
+    "jsonld": "^0.4.2",
+    "superagent": "^2.0.0-alpha.3"
   },
   "peerDependencies": {
     "webgme": "2.x"

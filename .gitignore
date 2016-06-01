@@ -30,3 +30,5 @@ config/config.dev*.js
 
 Result*.4ml
 model*.4ml
+
+/src/utils/docker.config.js

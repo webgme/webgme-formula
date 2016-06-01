@@ -21,6 +21,14 @@
         "2"
       ],
       "readOnly": false
+    },
+    {
+      "name": "includeConstraints",
+      "displayName": "Include Constraints",
+      "description": "Generated domain should contain user defined constraints",
+      "value": true,
+      "valueType": "boolean",
+      "readOnly": false
     }
   ]
 }
