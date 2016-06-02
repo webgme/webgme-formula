@@ -13,8 +13,7 @@ define([
     'use strict';
 
     var FormulaEditorWidget,
-        WIDGET_CLASS = 'formula-editor',
-        cmPercent = '85%'
+        WIDGET_CLASS = 'formula-editor';
 
     // TODO check if regular expression is correct and if it is fine here - no other users
     function getConstraintNamesFromText(txt) {
@@ -85,9 +84,6 @@ define([
             dragDrop: true
         });
 
-        $(this._el).find('.CodeMirror').css({
-            height: cmPercent
-        });
         this._codemirror.on('change', function () {
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
@@ -110,7 +106,7 @@ define([
             // console.log('focused', cm.getValue());
         });
 
-        this._autoSaveInterval = 10000; //1s autoSave - if change happened
+        this._autoSaveInterval = 2000; //1s autoSave - if change happened
         this._autoSaveTimer = null;
         this._previousCodeState = null;
 
@@ -130,11 +126,14 @@ define([
 
         this._codemirror.refresh();
 
-        this._loader = new LoaderCircles({containerElement: this._listEl});
+        this._loader = new LoaderCircles({containerElement: this._el});
     };
 
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
         this._logger.debug('Widget is resizing...');
+        $(this._el).find('.CodeMirror').css({
+            height: height - 25 > 200 ? height - 25 : 200
+        });
         this._codemirror.focus();
         this._codemirror.refresh();
     };

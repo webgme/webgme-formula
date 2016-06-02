@@ -56,9 +56,10 @@ define(['js/Constants',
             self._client.runBrowserPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
                 if (err) {
                     self._logger.error(err);
+                    self._widget.setResults({});
                     return;
                 }
-            
+
                 pluginContext = self._client.getCurrentPluginContext('CheckFORMULA', CONSTANTS.PROJECT_ROOT_ID);
 
                 //setting config parameters
@@ -67,9 +68,10 @@ define(['js/Constants',
                     constraints: constraints.join(" ")
                 };
 
-                self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err/*, pluginResult*/) {
-                    if (err) {
-                        self._logger.error(err);
+                self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err, pluginResult) {
+                    if (err || pluginResult.error) {
+                        self._logger.error(err || new Error(pluginResult.error));
+                        self._widget.setResults({});
                     }
                 });
             });

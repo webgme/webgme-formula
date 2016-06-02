@@ -13,11 +13,14 @@
 .formula-editor .btn-group {
     margin-left: 0;
     margin-right: 0;
+    height: 25px;
+    background-color: #F7FAFF;
 }
 
 .formula-editor .toolbar-button {
     display: inline-block;
     position: relative;
+    padding-top: 4px;
 }
 
 .formula-editor .btn {

@@ -68,8 +68,12 @@ function dockerTasker(options) {
                 task.cb();
             } else {
                 cmd.cp(task.id + ':usr/app/queryresults.json', 'queryresults.json');
-                result = JSON.parse(fs.readFileSync('queryresults.json', 'utf8') || '{}');
-                fs.unlinkSync('queryresults.json');
+                try {
+                    result = JSON.parse(fs.readFileSync('queryresults.json', 'utf8') || '{}');
+                    fs.unlinkSync('queryresults.json');
+                } catch (e) {
+                    result = {};
+                }
                 cmd.stop(task.id);
                 working = false;
                 task.cb(null, result);
