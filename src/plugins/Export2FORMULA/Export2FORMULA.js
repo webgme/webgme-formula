@@ -108,7 +108,7 @@ define([
                 domainName: self.projectName,
                 formulaVersion: self.currentConfig.formulaVersion,
                 formula: {},
-                userDefinedConstraints: self.core.getAttribute(self.rootNode, '_formulaConstraints'),
+                userDefinedConstraints: self.core.getAttribute(self.rootNode, '_formulaConstraints') || "",
                 nodes: {}
             };
 

@@ -8,8 +8,9 @@
 define([
     './FormulaCodeMirrorMode',
     'js/Loader/LoaderCircles',
+    'js/DragDrop/DropTarget',
     'text!./FormulaEditor.html'
-], function (CodeMirror, LoaderCircles, FormulaEditorHtml) {
+], function (CodeMirror, LoaderCircles, dropTarget, FormulaEditorHtml) {
     'use strict';
 
     var FormulaEditorWidget,
@@ -58,11 +59,6 @@ define([
 
         this._el.append(FormulaEditorHtml);
 
-        this._codeMirrorEl = this._el.find('#codearea').first();
-        // Create a dummy header 
-        // this._el.append('<h3>FormulaEditor</h3>');
-        // this.setTitle('FormulaEditor');
-
         this._saveConstraintsBtn = this._el.find('#constraintBtn').first();
 
         this._saveConstraintsBtn.on('click', function (/*event*/) {
@@ -72,6 +68,34 @@ define([
             self.setResults({}); // constraints probably changed so we clear the results
         });
 
+        // adding domain and its own codemirror
+        this._domainBtn = this._el.find('#domainBtn').first();
+        this._domainMirrorEl = this._el.find('#domainarea').first();
+        this._domainMirrorEl.focus();
+        this._domainmirror = CodeMirror.fromTextArea(this._domainMirrorEl.get(0), {
+            lineNumbers: true,
+            readOnly: true,
+            matchBrackets: true,
+            mode: {
+                name: 'formula',
+                globalVars: true
+            },
+            dragDrop: false
+        });
+        this._domainVisible = false;
+        this._domainBtn.on('click', function (/*event*/) {
+            if (self._domainVisible) {
+                self._domainVisible = false;
+                $(self._domainmirror.getWrapperElement()).hide();
+            } else {
+                self._domainVisible = true;
+                $(self._domainmirror.getWrapperElement()).show();
+            }
+            self._resizeWidget(self._domainVisible, self._el.height());
+        });
+        $(self._domainmirror.getWrapperElement()).hide(); //by default we hide it
+
+        this._codeMirrorEl = this._el.find('#codearea').first();
         this._codeMirrorEl.focus();
         this._codemirror = CodeMirror.fromTextArea(this._codeMirrorEl.get(0), {
             lineNumbers: true,
@@ -81,7 +105,7 @@ define([
                 name: 'formula',
                 globalVars: true
             },
-            dragDrop: true
+            dragDrop: false
         });
 
         this._codemirror.on('change', function () {
@@ -98,7 +122,7 @@ define([
             // console.log('dropping', event);
         });
 
-        this._codemirror.on('update', function (cm) {
+        this._codemirror.on('cursorActivity', function (cm) {
             // console.log('update', cm);
         });
 
@@ -109,8 +133,6 @@ define([
         this._autoSaveInterval = 2000; //1s autoSave - if change happened
         this._autoSaveTimer = null;
         this._previousCodeState = null;
-
-        this._listEl = this._el.find('#listarea').first();
 
         this._constraintList = this._el.find('#constraintlist').first();
         this._checkContraintsBtn = this._el.find('#checkBtn').first();
@@ -124,6 +146,40 @@ define([
         this._allOk.hide();
         this._allOk.attr('disabled', true);
 
+        //make it dropable
+        dropTarget.makeDroppable($(this._el).find('.CodeMirror'), {
+            over: function (event, dragInfo) {
+                // console.log('over: ', event, dragInfo);
+            },
+            out: function (event, dragInfo) {
+                // console.log('out: ', event, dragInfo);
+            },
+            drop: function (event, dragInfo) {
+                console.log('drop: ', event, dragInfo);
+                var cursor = self._codemirror.getCursor(),
+                    metaName,
+                    nodeName,
+                    gmeNode;
+                if (dragInfo && dragInfo.DRAG_ITEMS && dragInfo.DRAG_ITEMS.length === 1) {
+                    // we can only insert single types...
+                    gmeNode = WebGMEGlobal.Client.getNode(dragInfo.DRAG_ITEMS[0]);
+                    if (gmeNode) {
+                        metaName = WebGMEGlobal.Client.getNode(gmeNode.getMetaTypeId()).getFullyQualifiedName();
+                        nodeName = 'node_' + gmeNode.getFullyQualifiedName();
+                        metaName = nodeName +
+                            ' is ' + metaName + ', ' + nodeName + '.id = "' + dragInfo.DRAG_ITEMS[0] + '"';
+                        self._codemirror.replaceRange(metaName, cursor);
+                    }
+                }
+            },
+            activate: function (event, dragInfo) {
+                // console.log('activate: ', event, dragInfo);
+            },
+            deactivate: function (event, dragInfo) {
+                // console.log('deactivate: ', event, dragInfo);
+            }
+        });
+
         this._codemirror.refresh();
 
         this._loader = new LoaderCircles({containerElement: this._el});
@@ -131,11 +187,25 @@ define([
 
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
         this._logger.debug('Widget is resizing...');
-        $(this._el).find('.CodeMirror').css({
-            height: height - 25 > 200 ? height - 25 : 200
-        });
-        this._codemirror.focus();
-        this._codemirror.refresh();
+        this._resizeWidget(this._domainVisible, height);
+    };
+
+    FormulaEditorWidget.prototype._resizeWidget = function (isSplit, height) {
+        if (isSplit) {
+            $(this._el).find('.CodeMirror').css({
+                height: height - 25 > 200 ? (height - 25) / 2 : 100
+            });
+            this._domainmirror.focus();
+            this._domainmirror.refresh();
+            this._codemirror.focus();
+            this._codemirror.refresh();
+        } else {
+            $(this._el).find('.CodeMirror').css({
+                height: height - 25 > 200 ? height - 25 : 200
+            });
+            this._codemirror.focus();
+            this._codemirror.refresh();
+        }
     };
 
     // Auto-save functions
@@ -169,6 +239,13 @@ define([
 
     FormulaEditorWidget.prototype.getConstraints = function () {
         return this._codemirror.getValue();
+    };
+
+    FormulaEditorWidget.prototype.setDomain = function (text) {
+        var cursor = this._domainmirror.getCursor();
+        this._domainmirror.setValue(text);
+        this._domainmirror.refresh();
+        this._domainmirror.setCursor(cursor);
     };
 
     FormulaEditorWidget.prototype.setConstraints = function (text) {

@@ -6,10 +6,12 @@
 
 define(['js/Constants',
     'js/Utils/GMEConcepts',
-    'js/NodePropertyNames'
+    'js/NodePropertyNames',
+    'plugin/Export2FORMULA/Export2FORMULA/FormulaDomainUtil'
 ], function (CONSTANTS,
              GMEConcepts,
-             nodePropertyNames) {
+             nodePropertyNames,
+             formulaDomainUtil) {
 
     'use strict';
 
@@ -124,6 +126,7 @@ define(['js/Constants',
     };
 
     FormulaEditorControl.prototype._refreshConstraints = function () {
+        this._widget.setDomain(formulaDomainUtil.getDomain(this._client, this._client.getAllMetaNodes()));
         var node = this._client.getNode(CONSTANTS.PROJECT_ROOT_ID);
 
         if (node) {
