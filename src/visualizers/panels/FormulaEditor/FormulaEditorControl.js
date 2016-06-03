@@ -79,6 +79,16 @@ define(['js/Constants',
                         self._logger.error(err || new Error(pluginResult.error));
                         self._widget.setResults({});
                     }
+
+                    if (pluginResult.messages.length > 0) {
+                        // we just put the first as a notification
+                        self._client.dispatchEvent(self._client.CONSTANTS.NOTIFICATION, {
+                            severity: pluginResult.messages[0].severity || 'info',
+                            message: '[Formula] ' + pluginResult.messages[0].message
+                        });
+                        // something was still off so let's just finish the loaderCircle
+                        self._widget.setResults({});
+                    }
                 });
             });
         };

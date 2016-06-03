@@ -11,10 +11,12 @@ define([
     'plugin/PluginConfig',
     'text!./metadata.json',
     'plugin/PluginBase',
+    'plugin/PluginMessage',
     'superagent'
 ], function (PluginConfig,
              pluginMetadata,
              PluginBase,
+             PluginMessage,
              superagent) {
     'use strict';
 
@@ -56,35 +58,71 @@ define([
     CheckFORMULA.prototype.main = function (callback) {
         // Use self to access core, project, result, logger etc from PluginBase.
         // These are all instantiated at this point.
-        var self = this;
+        var self = this,
+            constraintsToCheck;
 
         self.currentConfig = self.getCurrentConfig();
+        constraintsToCheck = self.currentConfig.constraints.split(" ") || [];
+
+        if (constraintsToCheck.length === 0) {
+            // there is nothing to check!!!
+            self.result.addMessage(new PluginMessage({
+                commitHash: self.commitHash,
+                activeNode: '', //always point to the root
+                message: 'There is no constraints to check!!!'
+            }));
+            callback(null, self.result);
+        }
 
         self.blobClient.getObjectAsString(self.currentConfig.formulaModule, function (err, module) {
             if (err) {
                 self.logger.error(err);
+                self.result.addMessage(new PluginMessage({
+                    commitHash: self.commitHash,
+                    activeNode: '', //always point to the root
+                    message: 'Cannot get Formula representation of the model!'
+                }));
                 callback(null, self.result);
                 return;
             }
 
             superagent.post(self.currentConfig.formulaMachine)
                 .set('Content-Type', 'application/json')
-                .send({module: module, constraints: self.currentConfig.constraints.split(" ") || []})
+                .send({module: module, constraints: constraintsToCheck})
                 .end(function (err, result) {
                     var simpleResults,
                         constraintName;
 
                     if (err) {
                         self.logger.error(err);
+                        self.result.addMessage(new PluginMessage({
+                            commitHash: self.commitHash,
+                            activeNode: '', //always point to the root
+                            message: 'Formula webservice is unresponsive!'
+                        }));
+                        callback(null, self.result);
+                        return;
+                    } else if (Object.keys(result.body).length === 0) {
+                        // execution doesn't produced result
+                        self.result.addMessage(new PluginMessage({
+                            commitHash: self.commitHash,
+                            activeNode: '', //always point to the root
+                            message: 'Formula doesn\'t produced results. Check the syntax of your constraints!'
+                        }));
+
                         callback(null, self.result);
                         return;
                     }
 
+                    console.log(result.body, ' -- ', Object.keys(result.body).length);
                     simpleResults = result.body;
 
                     for (constraintName in simpleResults) {
                         if (typeof simpleResults[constraintName] !== 'boolean') {
                             simpleResults[constraintName] = simpleResults[constraintName] === 'true';
+                        }
+                        if (constraintsToCheck.indexOf(constraintName) !== -1) {
+                            constraintsToCheck.splice(constraintsToCheck.indexOf(constraintName), 1);
                         }
                     }
 
@@ -95,7 +133,18 @@ define([
                     );
                     self.save('CheckFORMULA updated model.')
                         .then(function () {
-                            self.result.setSuccess(true);
+                            self.result.addCommit(self.commitHash);
+                            if (constraintsToCheck.length > 0) {
+                                // not all constraints have resulted
+                                self.result.addMessage(new PluginMessage({
+                                    commitHash: self.commitHash,
+                                    activeNode: '', //always point to the root
+                                    message: 'Constraint(s): ' + constraintsToCheck +
+                                    ' have not resulted, check their syntax!'
+                                }));
+                            } else {
+                                self.result.setSuccess(true);
+                            }
                             callback(null, self.result);
                         })
                         .catch(function (err) {
