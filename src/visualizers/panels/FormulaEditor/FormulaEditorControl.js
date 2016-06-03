@@ -55,7 +55,9 @@ define(['js/Constants',
             self._widget.waitForResults();
             var pluginContext = self._client.getCurrentPluginContext('Export2FORMULA', CONSTANTS.PROJECT_ROOT_ID);
 
-            self._client.runBrowserPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
+            console.time('translate');
+            self._client.runServerPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
+                console.timeEnd('translate');
                 if (err) {
                     self._logger.error(err);
                     self._widget.setResults({});
@@ -70,7 +72,9 @@ define(['js/Constants',
                     constraints: constraints.join(" ")
                 };
 
+                console.time('check');
                 self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err, pluginResult) {
+                    console.timeEnd('check');
                     if (err || pluginResult.error) {
                         self._logger.error(err || new Error(pluginResult.error));
                         self._widget.setResults({});
