@@ -108,10 +108,11 @@ if (typeof config !== 'object' || !config.cmd) {
 }
 __dockerTasker = new dockerTasker({});
 
-__docker_rest.use(bodyParser.json());
+__docker_rest.use(bodyParser.json({limit: '900mb'}));
 
 __docker_rest.post('/4ml', function (req, res) {
     if (req && req.body) {
+        // console.log(JSON.stringify(req.body).length);
         __dockerTasker(req.body, function (err, result) {
             if (err) {
                 res.status(500).send(e);

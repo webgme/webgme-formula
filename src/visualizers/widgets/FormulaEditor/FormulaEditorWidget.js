@@ -111,11 +111,13 @@ define([
         this._codemirror.on('change', function () {
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
-            if (self._previousCodeState !== self._codemirror.getValue()) {
-                self._saveConstraintsBtn.attr('disabled', false);
-            } else {
-                self._saveConstraintsBtn.attr('disabled', true);
+            if (self._autoSaveTimer) {
+                clearTimeout(self._autoSaveTimer);
             }
+            self._autoSaveTimer = setTimeout(function () {
+                self._autoSave();
+                self._autoSaveTimer = null;
+            }, self._autoSaveInterval);
         });
 
         this._codemirror.on('drop', function (cm, event) {
@@ -220,19 +222,11 @@ define([
     };
 
     FormulaEditorWidget.prototype._startAutoSave = function () {
-        var self = this;
-        if (this._autoSaveTimer) {
-            clearInterval(this._autoSaveTimer);
-            this._autoSaveTimer = null;
-        }
-
-        this._autoSaveTimer = setInterval(function () {
-            self._autoSave.call(self);
-        }, this._autoSaveInterval);
+        // no need for start as we only autosave if user stops editing for autosave-time
     };
     FormulaEditorWidget.prototype._stopAutoSave = function () {
         if (this._autoSaveTimer) {
-            clearInterval(this._autoSaveTimer);
+            clearTimeout(this._autoSaveTimer);
             this._autoSaveTimer = null;
         }
     };
