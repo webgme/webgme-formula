@@ -111,6 +111,11 @@ define([
         this._codemirror.on('change', function () {
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
+            if (self._previousCodeState === self._codemirror.getValue()) {
+                self._saveConstraintsBtn.attr('disabled', true);
+            } else {
+                self._saveConstraintsBtn.attr('disabled', false);
+            }
             if (self._autoSaveTimer) {
                 clearTimeout(self._autoSaveTimer);
             }
@@ -167,7 +172,7 @@ define([
                     gmeNode = WebGMEGlobal.Client.getNode(dragInfo.DRAG_ITEMS[0]);
                     if (gmeNode) {
                         metaName = WebGMEGlobal.Client.getNode(gmeNode.getMetaTypeId()).getFullyQualifiedName();
-                        nodeName = 'node_' + gmeNode.getFullyQualifiedName();
+                        nodeName = 'node_' + gmeNode.getFullyQualifiedName().replace(/ /g, "_");
                         metaName = nodeName +
                             ' is ' + metaName + ', ' + nodeName + '.id = "' + dragInfo.DRAG_ITEMS[0] + '"';
                         self._codemirror.replaceRange(metaName, cursor);
