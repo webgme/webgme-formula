@@ -15,7 +15,6 @@ var escapeWebGmeName = function(s) {
             result.primitiveName = getPrimitiveName(s);
             result.unionName = getUnionName(s);
             result.attributeName = 'Attr' + result.primitiveName;
-            result.pointerName = 'Pointer' + result.primitiveName;
 
             return result;
         },
@@ -119,7 +118,7 @@ var nodeData, i, j,
         parentName,
         srcId, dstId,
         resolvedSrcName, resolvedDstName,
-        attrName = '', attrList, pointerList;
+        attrName = '', attrList;
 
 for (i = 0; i < keys.length; i += 1) {
     nodeData = nodes[keys[i]];
@@ -129,12 +128,11 @@ for (i = 0; i < keys.length; i += 1) {
 for (i = 0; i < keys.length; i += 1) {
     baseNodes=[];
     nodeData = nodes[keys[i]];
-    attrList = '', pointerList='';
-
+    attrList = '';
+    pointerNames = Object.keys(nodeData.jsonMeta.pointers);
 if (nodeData.isMetaType) {
     resolvedName = resolvedNames[nodeData.id];
     attrType = resolvedName.attributeName;
-    pointerType = resolvedName.pointerName;
 
     // Get the attribute list
     var attribute, attributeNames = Object.keys(nodeData.jsonMeta.attributes);
@@ -145,18 +143,6 @@ if (nodeData.isMetaType) {
     if (attrList.length>1){
         attrList = attrList.slice(0,-2);
     }
-
-    // Get the pointer list
-    var pointer, pointerNames = Object.keys(nodeData.jsonMeta.pointers);
-    for (j=0; j<pointerNames.length; j++){
-      if (pointerNames[j]=='src' || pointerNames[j]=='dst') continue;
-      pointer = nodeData.jsonMeta.pointers[pointerNames[j]].items[0];
-      pointerList += pointerNames[j] + ': any ' + resolvedNames[pointer].unionName + ' + {NULL}, ';
-    }
-    if (pointerList.length>1){
-        pointerList = pointerList.slice(0,-2);
-    }
-
 
     // FCO
     if (nodeData.base == null){
@@ -203,8 +189,7 @@ src: any <%= resolvedSrcName %> + {NULL},
 dst: any <%= resolvedDstName %> + {NULL},
 base: any <%= baseName.unionName %> + {NULL},
 parent: any GMENode,
-attributes: <%=attrType%> + {NULL} <% if (pointerList.length>0){ %>,
-pointers: any <%=pointerType%> + {NULL} <% } %>)
+attributes: <%=attrType%> + {NULL})
 <%=formula.lineEnding%>
 <%}
 else { %>
@@ -212,21 +197,15 @@ else { %>
 new (id:String,
 base: any <%= resolvedName.primitiveName %> + {NULL},
 parent: any GMENode + {NULL},
-attributes: <%=attrType%> + {NULL} <% if (pointerList.length>0){ %>,
-pointers: any <%=pointerType%> + {NULL} <% } %>)
+attributes: <%=attrType%> + {NULL})
 <%=formula.lineEnding%>
 <% }
 
     nodeUnion[resolvedName.unionName] = true;%>
 
-    // Attributes
-    <%=attrType%> ::= new (<%=attrList%>)<%=formula.lineEnding%>
+// Attributes
+<%=attrType%> ::= new (<%=attrList%>)<%=formula.lineEnding%>
 
-
-    <% if (pointerList.length>0){ %>
-    // Pointers
-    <%=pointerType%> ::= new (<%=pointerList%>)<%=formula.lineEnding%>
-    <% } %>
 <%
 }
 }
@@ -314,69 +293,22 @@ createAttribute = function(nodeData){
     return attrId;
 },
 
-hasPointers = function(nodeData){
-    var j,
-        pointerNames = Object.keys(nodeData.jsonMeta.pointers);
-
-    for (j = 0; j < pointerNames.length; j += 1) {
-        if (pointerNames[j]=='src' || pointerNames[j]=='dst') continue;
-        return true;
-    }
-    return false;
-}
-
-createPointer = function(nodeData){
-    var baseNode = nodes[nodeData.base],
-        metaNode = nodes[nodeData.meta],
-        pointerType = resolvedNames[metaNode.id].pointerName,
-        pointerValues = '',
-        pointer,
-        pointerNames = Object.keys(nodeData.jsonMeta.pointers),
-        pointerId = generateId(),
-        pointerValue = '',
-        j;
-
-    if (!hasPointers(nodeData)) return null;
-
-    for (j = 0; j < pointerNames.length; j += 1) {
-        pointerValue = '';
-        if (nodeData.pointers[pointerNames[j]]==null){
-            pointerValue = 'NULL';
-        }
-        else {
-            pointerValue = createNode(nodeData.pointers[pointerNames[j]]);
-        }
-
-        pointerValues +=  pointerValue + ', ';
-    }
-    if (pointerValues.length>1){
-        pointerValues = pointerValues.slice(0,-2);
-    }%>
-<%=pointerId%> is <%=pointerType%>(<%-pointerValues%>)<%=formula.lineEnding%>
-<%
-
-    return pointerId;
-},
-
 createNode = function(nodeId){
-    nodeData = nodes[nodeId];
+    var nodeData = nodes[nodeId];
     if (nodeIdFormulaId[nodeId]!=undefined)
         return nodeIdFormulaId[nodeId];
 
-    var formulaId = generateId();
-    nodeIdFormulaId[nodeId] = formulaId;
-
-    var     metaNode = nodes[nodeData.meta],
+    var formulaId = generateId(),
+            metaNode = nodes[nodeData.meta],
             baseNode = nodes[nodeData.base],
             parentNode = nodes[nodeData.parent],
             parentNodeFormulaId = '',
             srcFormulaId = '', dstFormulaId = '',
             srcId, dstId, baseNodeId,
             resolvedMetaName = resolvedNames[metaNode.id],
-            attrId = createAttribute(nodeData),
-            pointerId = createPointer(nodeData);
+            attrId = createAttribute(nodeData);
 
-
+    nodeIdFormulaId[nodeId] = formulaId;
 
     // Create the parent (if it is not the root, or the root is not the parent of the current one)
     if (parentNode==null || parentNode.id===''){
@@ -398,11 +330,16 @@ createNode = function(nodeId){
 
     // Handle connections
     // Check if the metanode contains src/dst definitions
+//console.log(metaNode.jsonMeta.pointers);
 if (metaNode.jsonMeta.pointers.src != undefined &&
         metaNode.jsonMeta.pointers.dst != undefined) {
 
     srcId = nodeData.pointers['src'];
     dstId = nodeData.pointers['dst'];
+
+    console.log(metaNode);
+    console.log(nodeData);
+    console.log(' -- -- -- ');
 
     if (srcId == null) {
         srcFormulaId = "NULL";
@@ -418,14 +355,14 @@ if (metaNode.jsonMeta.pointers.src != undefined &&
 
 %>
 
-<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= srcFormulaId %>, <%= dstFormulaId %>, <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %> <% if (pointerId!=null){ %>, <%= pointerId %> <%}%>)<%=formula.lineEnding%>
+<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= srcFormulaId %>, <%= dstFormulaId %>, <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %>)<%=formula.lineEnding%>
 
 <%
 }
 else{
 %>
 
-<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %> <% if (pointerId!=null){ %>, <%= pointerId %> <%}%>)<%=formula.lineEnding%>
+<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %>)<%=formula.lineEnding%>
 
 <%
 
