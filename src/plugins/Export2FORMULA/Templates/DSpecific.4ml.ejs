@@ -6,97 +6,99 @@
 <%
 
 var escapeWebGmeName = function(s) {
-      var result = s.replace(/(\s|\+)/g,"_");
-      return result;
-    },
-    getFormulaNames = function(s){
-      var result={};
+            var result = s.replace(/(\s|\+)/g,"_");
+            return result;
+        },
+        getFormulaNames = function(s){
+            var result={};
 
-      result.primitiveName = getPrimitiveName(s);
-      result.unionName = getUnionName(s);
-      result.attributeName = 'Attr' + result.primitiveName;
+            result.primitiveName = getPrimitiveName(s);
+            result.unionName = getUnionName(s);
+            result.attributeName = 'Attr' + result.primitiveName;
+            result.pointerName = 'Pointer' + result.primitiveName;
 
-      return result;
-    },
-    getPrimitiveName = function(s){
-      var result;
+            return result;
+        },
+        getPrimitiveName = function(s){
+            var result;
 
-      result = escapeWebGmeName(s);
-      result = "__".concat(result);
+            result = escapeWebGmeName(s);
+            result = "__".concat(result);
 
-      return result;
-    },
-    getUnionName = function(s){
-      return escapeWebGmeName(s);
-    },
-    /* createMetaInheritanceTree = function(nodeData, allNodes, results) {
+            return result;
+        },
+        getUnionName = function(s){
+            return escapeWebGmeName(s);
+        },
+/* createMetaInheritanceTree = function(nodeData, allNodes, results) {
 
-      var baseName = 'NULL';
+ var baseName = 'NULL';
 
-      if (allNodes[nodeData.base] == undefined){
-        return null;
-      } else {
-        baseName = resolveWebGmeName(allNodes[nodeData.base].name);
-        results[baseName] = true;
-        createMetaInheritanceTree(nodeData.base, allNodes, results);
-      }
-    },*/
-    createMetaDescendantsList = function(nodeData, allNodes){
-      var results = {
-        primitiveNames : {},
-        unionNames : {}
-      }, i, currentChildNode;
+ if (allNodes[nodeData.base] == undefined){
+ return null;
+ } else {
+ baseName = resolveWebGmeName(allNodes[nodeData.base].name);
+ results[baseName] = true;
+ createMetaInheritanceTree(nodeData.base, allNodes, results);
+ }
+ },*/
+        createMetaDescendantsList = function(nodeData, allNodes){
+            var results = {
+                primitiveNames : {},
+                unionNames : {}
+            }, i, currentChildNode;
 
-      for (prop in allNodes){
-        currentChildNode = allNodes[prop];
+            for (prop in allNodes){
+                currentChildNode = allNodes[prop];
 
-        // Process just the metanodes with base (only node with base can be a descandant of an FCO)
-        if (currentChildNode.base  == null || !currentChildNode.isMetaType) continue;
-        currentBaseNode = allNodes[currentChildNode.base];
+                // Process just the metanodes with base (only node with base can be a descandant of an FCO)
+                if (currentChildNode.base  == null || !currentChildNode.isMetaType) continue;
+                currentBaseNode = allNodes[currentChildNode.base];
 
 
-        if (currentBaseNode.id === nodeData.id){
-          results.primitiveNames[getPrimitiveName(currentChildNode.name)] = true;
-          results.unionNames[getUnionName(currentChildNode.name)] = true;
-        }
-      }
+                if (currentBaseNode.id === nodeData.id){
+                    results.primitiveNames[getPrimitiveName(currentChildNode.name)] = true;
+                    results.unionNames[getUnionName(currentChildNode.name)] = true;
+                }
+            }
 
-      return results;
-    },
+            return results;
+        },
 
-    formulaDomainName = "D".concat(escapeWebGmeName(projectName)),
-    formulaModelName = "m",
+        formulaDomainName = "DProject",
+        formulaConstraintDomainName = "DConstraint"
+        formulaModelName = "m",
 
-    // Creates a union from the KEY values of the dictionary
-    createFormulaUnion = function (dict, newUnionName){
-      var result = '',
-          hadKey = false;
+// Creates a union from the KEY values of the dictionary
+        createFormulaUnion = function (dict, newUnionName){
+            var result = '',
+                    hadKey = false;
 
-      result = result.concat(newUnionName);
-      result = result.concat(" ::= ");
+            result = result.concat(newUnionName);
+            result = result.concat(" ::= ");
 
-      for (prop in dict){
-        result = result.concat(prop);
-        result = result.concat(" + ");
-        hadKey = true;
-      }
+            for (prop in dict){
+                result = result.concat(prop);
+                result = result.concat(" + ");
+                hadKey = true;
+            }
 
-      if (!hadKey){
-        return '';
-      }
+            if (!hadKey){
+                return '';
+            }
 
-      result = result.slice(0,-3);
+            result = result.slice(0,-3);
 
-      return result;
-    },
+            return result;
+        },
 
-    dumpUnions = function(unions){
-      var i;
-      for (i = 0; i < unions.length; i += 1) {
-        if (unions[i] === '') continue; %>
-      <%= unions[i] %><%=formula.lineEnding%>
-      <%}
-    };
+        dumpUnions = function(unions){
+    var i;
+for (i = 0; i < unions.length; i += 1) {
+    if (unions[i] === '') continue; %>
+<%= unions[i] %><%=formula.lineEnding%>
+<%}
+};
 
 %>
 
@@ -104,171 +106,191 @@ var escapeWebGmeName = function(s) {
 domain <%= formulaDomainName %>
 {
 <%
-  var nodeData, i, j,
-      keys = Object.keys(nodes),
-      nodeUnion = {},
-      connectionUnion = {},
-      resolvedNames = [],
-      resolvedName = '',
-      formulaUnions = [],
-      pointerNames,
-      descendants=[],
-      baseName,
-      parentName,
-      srcId, dstId,
-      resolvedSrcName, resolvedDstName,
-      attrName = '', attrList;
+var nodeData, i, j,
+        keys = Object.keys(nodes),
+        nodeUnion = {},
+        connectionUnion = {},
+        resolvedNames = [],
+        resolvedName = '',
+        formulaUnions = [],
+        pointerNames,
+        descendants=[],
+        baseName,
+        parentName,
+        srcId, dstId,
+        resolvedSrcName, resolvedDstName,
+        attrName = '', attrList, pointerList;
 
-  for (i = 0; i < keys.length; i += 1) {
+for (i = 0; i < keys.length; i += 1) {
     nodeData = nodes[keys[i]];
     resolvedNames[nodeData.id] = getFormulaNames(nodeData.name);
-  }
+}
 
-  for (i = 0; i < keys.length; i += 1) {
+for (i = 0; i < keys.length; i += 1) {
     baseNodes=[];
     nodeData = nodes[keys[i]];
-    attrList = '';
-    pointerNames = Object.keys(nodeData.jsonMeta.pointers);
-    if (nodeData.isMetaType) {
-      resolvedName = resolvedNames[nodeData.id];
-      attrType = resolvedName.attributeName;
-      
-      // Get the attribute list
-      var attribute, attributeNames = Object.keys(nodeData.jsonMeta.attributes);
-      for (j = 0; j < attributeNames.length; j += 1) {
-         attribute = nodeData.jsonMeta.attributes[attributeNames[j]];
-         attrList += attributeNames[j] + ':String, ';
-      }
-      if (attrList.length>1){
-          attrList = attrList.slice(0,-2);
-      }
+    attrList = '', pointerList='';
 
-      // FCO
-      if (nodeData.base == null){
+if (nodeData.isMetaType) {
+    resolvedName = resolvedNames[nodeData.id];
+    attrType = resolvedName.attributeName;
+    pointerType = resolvedName.pointerName;
+
+    // Get the attribute list
+    var attribute, attributeNames = Object.keys(nodeData.jsonMeta.attributes);
+    for (j = 0; j < attributeNames.length; j += 1) {
+        attribute = nodeData.jsonMeta.attributes[attributeNames[j]];
+        attrList += attributeNames[j] + ':String, ';
+    }
+    if (attrList.length>1){
+        attrList = attrList.slice(0,-2);
+    }
+
+    // Get the pointer list
+    var pointer, pointerNames = Object.keys(nodeData.jsonMeta.pointers);
+    for (j=0; j<pointerNames.length; j++){
+        if (pointerNames[j]=='src' || pointerNames[j]=='dst') continue;
+        pointer = nodeData.jsonMeta.pointers[pointerNames[j]].items[0];
+        pointerList += pointerNames[j] + ': any ' + resolvedNames[pointer].unionName + ' + {NULL}, ';
+    }
+    if (pointerList.length>1){
+        pointerList = pointerList.slice(0,-2);
+    }
+
+
+    // FCO
+    if (nodeData.base == null){
         baseName= {
-          unionName : '{NULL}',
-          primitiveName : '{NULL}'
-        }
-      }
-      else{
-        baseName = resolvedNames[nodes[nodeData.base].id];
-      }
-      
-      /*if (nodeData.parent == null){
-          parentName= {
             unionName : '{NULL}',
             primitiveName : '{NULL}'
-          }
-      }
-      else{
-          parentName = resolvedNames[nodes[nodeData.parent].id];
-      }*/
-
-      descendants = createMetaDescendantsList(nodeData, nodes);
-
-      var tmpUnion = descendants.unionNames;
-      tmpUnion[resolvedName.primitiveName] = true;
-
-      formulaUnions.push(createFormulaUnion(tmpUnion, resolvedName.unionName));
-
-
-      // If the node is a connection, add to the connection union
-      // and generate src, dst attributes
-      if (nodeData.jsonMeta.pointers.src != undefined &&
-          nodeData.jsonMeta.pointers.dst != undefined) {
-
-        srcId = nodeData.jsonMeta.pointers.src.items[0];
-        dstId = nodeData.jsonMeta.pointers.dst.items[0];
-        resolvedSrcName = resolvedNames[srcId].unionName;
-        resolvedDstName = resolvedNames[dstId].unionName;
-
-        connectionUnion[resolvedName.unionName] = true; %>
-        <%= resolvedName.primitiveName %> ::= new (id: String,
-                          src: any <%= resolvedSrcName %> + {NULL},
-                          dst: any <%= resolvedDstName %> + {NULL},
-                          base: any <%= baseName.unionName %> + {NULL},
-                          parent: any GMENode,
-                          attributes: <%=attrType%> + {NULL})
-                          <%=formula.lineEnding%>
-      <%}
-      else { %>
-        <%= resolvedName.primitiveName %> ::=
-                  new (id:String,
-                       base: any <%= resolvedName.primitiveName %> + {NULL},
-                       parent: any GMENode + {NULL},
-                       attributes: <%=attrType%> + {NULL})
-                       <%=formula.lineEnding%>
-      <% }
-
-      nodeUnion[resolvedName.unionName] = true;%>
-      
-      // Attributes
-      <%=attrType%> ::= new (<%=attrList%>)<%=formula.lineEnding%>
-
-<%
+        }
     }
-  }
+    else{
+        baseName = resolvedNames[nodes[nodeData.base].id];
+    }
 
-  // Process the unions
-  formulaUnions.push(createFormulaUnion(nodeUnion, "GMENode"));
-  formulaUnions.push(createFormulaUnion(connectionUnion, "GMEConnections"));
+    /*if (nodeData.parent == null){
+     parentName= {
+     unionName : '{NULL}',
+     primitiveName : '{NULL}'
+     }
+     }
+     else{
+     parentName = resolvedNames[nodes[nodeData.parent].id];
+     }*/
 
-  dumpUnions(formulaUnions);
+    descendants = createMetaDescendantsList(nodeData, nodes);
+
+    var tmpUnion = descendants.unionNames;
+    tmpUnion[resolvedName.primitiveName] = true;
+
+    formulaUnions.push(createFormulaUnion(tmpUnion, resolvedName.unionName));
+
+
+    // If the node is a connection, add to the connection union
+    // and generate src, dst attributes
+if (nodeData.jsonMeta.pointers.src != undefined &&
+        nodeData.jsonMeta.pointers.dst != undefined) {
+
+    srcId = nodeData.jsonMeta.pointers.src.items[0];
+    dstId = nodeData.jsonMeta.pointers.dst.items[0];
+    resolvedSrcName = resolvedNames[srcId].unionName;
+    resolvedDstName = resolvedNames[dstId].unionName;
+
+    connectionUnion[resolvedName.unionName] = true; %>
+<%= resolvedName.primitiveName %> ::= new (id: String,
+src: any <%= resolvedSrcName %> + {NULL},
+dst: any <%= resolvedDstName %> + {NULL},
+base: any <%= baseName.unionName %> + {NULL},
+parent: any GMENode,
+attributes: <%=attrType%> + {NULL} <% if (pointerList.length>0){ %>,
+pointers: any <%=pointerType%> + {NULL} <% } %>)
+<%=formula.lineEnding%>
+<%}
+else { %>
+<%= resolvedName.primitiveName %> ::=
+new (id:String,
+base: any <%= resolvedName.primitiveName %> + {NULL},
+parent: any GMENode + {NULL},
+attributes: <%=attrType%> + {NULL} <% if (pointerList.length>0){ %>,
+pointers: any <%=pointerType%> + {NULL} <% } %>)
+<%=formula.lineEnding%>
+<% }
+
+    nodeUnion[resolvedName.unionName] = true;%>
+
+// Attributes
+<%=attrType%> ::= new (<%=attrList%>)<%=formula.lineEnding%>
+
+
+<% if (pointerList.length>0){ %>
+// Pointers
+<%=pointerType%> ::= new (<%=pointerList%>)<%=formula.lineEnding%>
+<% } %>
+<%
+}
+}
+
+// Process the unions
+formulaUnions.push(createFormulaUnion(nodeUnion, "GMENode"));
+formulaUnions.push(createFormulaUnion(connectionUnion, "GMEConnections"));
+
+dumpUnions(formulaUnions);
 %>
 
-  // ContainmentTree
-  ContainmentTree ::= (child: GMENode, parent:GMENode + {NULL}).
-  ContainmentTree(child, parent) :-   child is GMENode
-                                    , parent = child.parent
-                                    ; ContainmentTree(child, x)
-                                    , ContainmentTree(x, parent)
-                                    .
-                                    
-  // InheritanceTree
-  InheritanceTree ::= (child: GMENode, base: GMENode + {NULL}).
-  InheritanceTree(child, base) :-     child is GMENode
-                                    , base = child.base
-                                    ; InheritanceTree(child, x)
-                                    , InheritanceTree(x, base)
-                                    .
+// ContainmentTree
+ContainmentTree ::= (child: GMENode, parent:GMENode + {NULL}).
+ContainmentTree(child, parent) :-   child is GMENode
+, parent = child.parent
+; ContainmentTree(child, x)
+, ContainmentTree(x, parent)
+.
+
+// InheritanceTree
+InheritanceTree ::= (child: GMENode, base: GMENode + {NULL}).
+InheritanceTree(child, base) :-     child is GMENode
+, base = child.base
+; InheritanceTree(child, x)
+, InheritanceTree(x, base)
+.
 }
 
 <%
 
 var generatedIds = {},
-    generateId = function () {
-    
-        var text = "";
-        var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        var exists = false;
+        generateId = function () {
 
-        do {
-            text="";
-            text += possible.charAt(Math.floor(Math.random() * (possible.length-10)));
-            for(var i=0; i < 9; i++ )
-                text += possible.charAt(Math.floor(Math.random() * possible.length));
-            if (generatedIds[text]!=undefined){
-                exists=true;
-            }
-            else{
-                generatedIds[text]=true;
-            }
-        } while (exists)
-        
-        return text;
-    },
-    
-    
-    /*var S4 = function() {
-       return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
-    };
-    return (S4()+S4()+"_"+S4()+"_"+S4()+"_"+S4()+"_"+S4()+S4()+S4());
-    },*/
-    
-    nodeIdFormulaId = {},
-    
-    createAttribute = function(nodeData){
-        var baseNode = nodes[nodeData.base],
+            var text = "";
+            var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var exists = false;
+
+            do {
+                text="";
+                text += possible.charAt(Math.floor(Math.random() * (possible.length-10)));
+                for(var i=0; i < 9; i++ )
+                    text += possible.charAt(Math.floor(Math.random() * possible.length));
+                if (generatedIds[text]!=undefined){
+                    exists=true;
+                }
+                else{
+                    generatedIds[text]=true;
+                }
+            } while (exists)
+
+            return text;
+        },
+
+
+/*var S4 = function() {
+ return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+ };
+ return (S4()+S4()+"_"+S4()+"_"+S4()+"_"+S4()+"_"+S4()+S4()+S4());
+ },*/
+
+        nodeIdFormulaId = {},
+
+createAttribute = function(nodeData){
+    var baseNode = nodes[nodeData.base],
             metaNode = nodes[nodeData.meta],
             attrType = resolvedNames[metaNode.id].attributeName,
             attrValues = '',
@@ -276,108 +298,154 @@ var generatedIds = {},
             attributeNames = Object.keys(nodeData.jsonMeta.attributes),
             attrId = generateId(),
             attrValue = '';
-        
-        for (j = 0; j < attributeNames.length; j += 1) {
-            attrValue = nodeData.attributes[attributeNames[j]];
-            if (attrValue==null) attrValue = 'NULL';
-            attrValues +=  '"' + attrValue + '"' + ', ';
+
+    for (j = 0; j < attributeNames.length; j += 1) {
+        attrValue = nodeData.attributes[attributeNames[j]];
+        if (attrValue==null) attrValue = 'NULL';
+        attrValues +=  '"' + attrValue + '"' + ', ';
+    }
+
+    if (attrValues.length>1){
+        attrValues = attrValues.slice(0,-2);
+    }%>
+<%=attrId%> is <%=attrType%>(<%-attrValues%>)<%=formula.lineEnding%>
+<%
+
+    return attrId;
+},
+
+        hasPointers = function(nodeData){
+            var j,
+                    pointerNames = Object.keys(nodeData.jsonMeta.pointers);
+
+            for (j = 0; j < pointerNames.length; j += 1) {
+                if (pointerNames[j]=='src' || pointerNames[j]=='dst') continue;
+                return true;
+            }
+            return false;
         }
-        
-        if (attrValues.length>1){
-            attrValues = attrValues.slice(0,-2);
-        }%>
-            <%=attrId%> is <%=attrType%>(<%-attrValues%>)<%=formula.lineEnding%>
-        <%
-        
-        return attrId;
-    },
-    
-    createNode = function(nodeId){
-        nodeData = nodes[nodeId];
-        if (nodeIdFormulaId[nodeId]!=undefined)
-            return nodeIdFormulaId[nodeId];
-        
-        var formulaId = generateId(),
+
+        createPointer = function(nodeData){
+    var baseNode = nodes[nodeData.base],
             metaNode = nodes[nodeData.meta],
+            pointerType = resolvedNames[metaNode.id].pointerName,
+            pointerValues = '',
+            pointer,
+            pointerNames = Object.keys(nodeData.jsonMeta.pointers),
+            pointerId = generateId(),
+            pointerValue = '',
+            j;
+
+    if (!hasPointers(nodeData)) return null;
+
+    for (j = 0; j < pointerNames.length; j += 1) {
+        pointerValue = '';
+        if (nodeData.pointers[pointerNames[j]]==null){
+            pointerValue = 'NULL';
+        }
+        else {
+            pointerValue = createNode(nodeData.pointers[pointerNames[j]]);
+        }
+
+        pointerValues +=  pointerValue + ', ';
+    }
+    if (pointerValues.length>1){
+        pointerValues = pointerValues.slice(0,-2);
+    }%>
+<%=pointerId%> is <%=pointerType%>(<%-pointerValues%>)<%=formula.lineEnding%>
+<%
+
+    return pointerId;
+},
+
+        createNode = function(nodeId){
+    nodeData = nodes[nodeId];
+    if (nodeIdFormulaId[nodeId]!=undefined)
+        return nodeIdFormulaId[nodeId];
+
+    var formulaId = generateId();
+    nodeIdFormulaId[nodeId] = formulaId;
+
+    var     metaNode = nodes[nodeData.meta],
             baseNode = nodes[nodeData.base],
             parentNode = nodes[nodeData.parent],
             parentNodeFormulaId = '',
             srcFormulaId = '', dstFormulaId = '',
             srcId, dstId, baseNodeId,
             resolvedMetaName = resolvedNames[metaNode.id],
-            attrId = createAttribute(nodeData);
-            
-        nodeIdFormulaId[nodeId] = formulaId;
-        
-        // Create the parent (if it is not the root, or the root is not the parent of the current one)
-        if (parentNode==null || parentNode.id===''){
-            parentNodeFormulaId = 'NULL';
-        }
-        else{
-            createNode(parentNode.id);     
-            parentNodeFormulaId = nodeIdFormulaId[parentNode.id];       
-        }
-        
-        // Create basenode (just for sure)        
-        if (baseNode == null || baseNode.isMetaType) {
-            baseNodeId = 'NULL';
-        }
-        else {
-            createNode(baseNode.id);
-            baseNodeId = nodeIdFormulaId[baseNode.id];
-        }
-                
-        // Handle connections
-        // Check if the metanode contains src/dst definitions 
-        if (metaNode.jsonMeta.pointers.src != undefined &&
-            metaNode.jsonMeta.pointers.dst != undefined) {
-            
-            srcId = nodeData.pointers['src'];
-            dstId = nodeData.pointers['dst'];
-            
-            if (srcId == null) {
-                srcFormulaId = "NULL";
-            }else{
-                srcFormulaId = createNode(srcId);
-            }
-            
-            if (dstId == null) {
-                dstFormulaId = "NULL";
-            }else{
-                dstFormulaId = createNode(dstId);
-            }
-            
-            %>
-            
-            <%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= srcFormulaId %>, <%= dstFormulaId %>, <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %>)<%=formula.lineEnding%>
-                
-            <%
-            }
-        else{
-            %>
-            
-            <%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %>)<%=formula.lineEnding%>
+            attrId = createAttribute(nodeData),
+            pointerId = createPointer(nodeData);
 
-            <%
-        
-            return formulaId;
-          }
-    };
-    
+
+
+    // Create the parent (if it is not the root, or the root is not the parent of the current one)
+    if (parentNode==null || parentNode.id===''){
+        parentNodeFormulaId = 'NULL';
+    }
+    else{
+        createNode(parentNode.id);
+        parentNodeFormulaId = nodeIdFormulaId[parentNode.id];
+    }
+
+    // Create basenode (just for sure)
+    if (baseNode == null || baseNode.isMetaType) {
+        baseNodeId = 'NULL';
+    }
+    else {
+        createNode(baseNode.id);
+        baseNodeId = nodeIdFormulaId[baseNode.id];
+    }
+
+    // Handle connections
+    // Check if the metanode contains src/dst definitions
+if (metaNode.jsonMeta.pointers.src != undefined &&
+        metaNode.jsonMeta.pointers.dst != undefined) {
+
+    srcId = nodeData.pointers['src'];
+    dstId = nodeData.pointers['dst'];
+
+    if (srcId == null) {
+        srcFormulaId = "NULL";
+    }else{
+        srcFormulaId = createNode(srcId);
+    }
+
+    if (dstId == null) {
+        dstFormulaId = "NULL";
+    }else{
+        dstFormulaId = createNode(dstId);
+    }
+
 %>
 
+<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= srcFormulaId %>, <%= dstFormulaId %>, <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %> <% if (pointerId!=null){ %>, <%= pointerId %> <%}%>)<%=formula.lineEnding%>
+
+<%
+}
+else{
+%>
+
+<%= formulaId %> is <%=resolvedMetaName.primitiveName%> ("<%= nodeId %>", <%= baseNodeId %>, <%= parentNodeFormulaId %>,  <%= attrId %> <% if (pointerId!=null){ %>, <%= pointerId %> <%}%>)<%=formula.lineEnding%>
+
+<%
+
+    return formulaId;
+}
+};
+
+%>
 model M of <%= formulaDomainName %>
 {
 <%
-    
-    for (i = 0; i < keys.length; i += 1) {
-        baseNodes=[];
-        nodeData = nodes[keys[i]];
-        pointerNames = Object.keys(nodeData.jsonMeta.pointers);
-        if (!nodeData.isMetaType && nodeData.id!="") {
-            createNode(nodeData.id); 
-        }
+
+for (i = 0; i < keys.length; i += 1) {
+    baseNodes=[];
+    nodeData = nodes[keys[i]];
+    pointerNames = Object.keys(nodeData.jsonMeta.pointers);
+    if (!nodeData.isMetaType && nodeData.id!="") {
+        createNode(nodeData.id);
     }
-    
+}
+
 %>
 }
