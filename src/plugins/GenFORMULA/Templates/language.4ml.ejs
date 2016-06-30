@@ -1,0 +1,133 @@
+<%
+var path,
+        baseName,
+        numOfAttributes,
+        numOfPointers,
+        isConnection,
+        counter,
+        connectionTypes = [],
+        allTypes = [];
+
+function convertName(name) {
+    return name.replace(/ /g, "_");
+}
+
+function getFormulaTypeOfAttribute(attributeDescriptor) {
+    switch (attributeDescriptor.type || 'string') {
+        case 'string':
+        case 'asset':
+            return 'String';
+        case 'integer':
+            return 'Integer';
+        case 'float':
+            return 'Real';
+        case 'boolean':
+            return 'Boolean';
+    }
+}
+
+function collectInstanceTypes() {
+    var types = [],
+            typePath;
+
+    for (typePath in nodes) {
+        if (nodes[typePath].base === path) {
+            types.push(convertName(nodes[typePath].name));
+        }
+    }
+    return types;
+}
+
+// this function take into account the order of param definitions which is ...,'name','src+dst','attributes','pointers'
+function isClosingParameter(paramName) {
+    switch (paramName) {
+        case 'name':
+            if (!numOfAttributes && !numOfPointers && !isConnection) {
+                return true;
+            }
+            return false;
+        case 'connection':
+            if (!numOfAttributes && !numOfPointers) {
+                return true;
+            }
+            return false;
+        case 'attributes':
+            if (numOfAttributes && !numOfPointers) {
+                return true;
+            }
+            return false;
+
+    }
+}
+%>
+domain Language {
+<%
+for(var path in nodes) {
+    //node definition
+    baseName = convertName(nodes[path].name);
+    numOfAttributes = nodes[path].attributeNames.length;
+    isConnection = nodes[path].isConnection;
+
+    allTypes.push(baseName);
+    if (isConnection) {
+        connectionTypes.push(baseName);
+        nodes[path].pointerNames.splice(nodes[path].pointerNames.indexOf('src'), 1);
+        nodes[path].pointerNames.splice(nodes[path].pointerNames.indexOf('dst'), 1);
+    }
+
+    numOfPointers = nodes[path].pointerNames.length;
+%>
+// <%= nodes[path].name %>
+__<%= baseName %> ::= new (
+id: String,
+base: any GMENode + {NULL},
+parent: any GMENode + {NULL},
+name: String<% if(isClosingParameter('name')){ %>).<% } else { %>,<% } %> <%
+if(isConnection){ %>
+src: any GMENode + {NULL},
+dst: any GMENode + {NULL}<% if(isClosingParameter('connection')){ %>).<% } else { %>,<% }} %>
+<% if(numOfAttributes){ %>attributes: any Attr__<%= baseName %> + {NULL}<% } if(isClosingParameter('attributes')){ %>).<% } else { %>,<% } %>
+<% if(numOfPointers){ %>pointers: any Ptr__<%= baseName %> + {NULL}).<% } %>
+<% if(numOfAttributes){
+%>Attr__<%= baseName %> ::= new (<%
+    counter = 0;
+for(var i = 0;i < nodes[path].attributeNames.length;i += 1){
+    counter += 1;
+%> <%= nodes[path].attributeNames[i] %>:<%= getFormulaTypeOfAttribute(nodes[path].meta.attributes[nodes[path].attributeNames[i]]) %> <%
+if (counter === numOfAttributes){ %>).<% }else{ %>,<% }
+} %> <% } %>
+<% if(numOfPointers){
+%>Ptr__<%= baseName %> ::= new (<%
+    counter = 0;
+        for(var i in nodes[path].pointerNames){
+    counter += 1;
+%> <%= nodes[path].pointerNames[i] %>:any GMENode + {NULL}> <%
+if (counter === numOfPointers){ %>).<% }else{ %>,<% }
+} %> <% } %>
+<%= baseName %> ::= <% var types = collectInstanceTypes(); for(var i = 0;i < types.length;i += 1){ %> <%= types[i] %> +<% } %> __<%= baseName %>.
+// <%= nodes[path].name %> - end
+<%
+}
+%>
+// The superset of all node types: GMENode.
+GMENode ::=<%
+for(var i = 0;i < allTypes.length;i += 1){
+%> <%= allTypes[i] %> <% if(i < allTypes.length - 1){ %>+<% }else{ %>.<% }
+}
+%>
+
+// The superset of all connection types: GMEConnection.
+GMEConnection ::=<%
+for(var i = 0;i < connectionTypes.length;i += 1){
+%> <%= connectionTypes[i] %> <% if(i < connectionTypes.length - 1){ %>+<% }else{ %>.<% }
+}
+%>
+
+// The representation of the containment relation: GMEContainment
+GMEContainment ::= (child: GMENode, parent:GMENode + {NULL}).
+GMEContainment(child, parent) :- child is GMENode, parent = child.parent ; GMEContainment(child, x), GMEContainment(x, parent).
+
+// The representation of the inheritance relation: GMEInheritance
+GMEInheritance ::= (child: GMENode, base: GMENode + {NULL}).
+GMEInheritance(child, base) :- child is GMENode, base = child.base ; GMEInheritance(child, x), GMEInheritance(x, base).
+}

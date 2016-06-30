@@ -1,0 +1,69 @@
+<%
+function convertName(name) {
+    return name.replace(/ /g, "_").replace(/\//g, "_");
+}
+// attribute formula node
+if (attributeNames.length > 0) {
+%>
+Attr_<%= convertName(id) %> is Attr__<%= convertName(type.name) %> (<%
+    for (var i = 0; i < attributeNames.length; i += 1) {
+        switch(attributes[attributeNames[i]].type){
+            case 'string':
+            case 'asset':
+                %>"<%= attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : '' %>"<%
+                break;
+            case 'boolean':
+                if(attributes[attributeNames[i]].value){
+                    %>TRUE<%
+                } else {
+                    %>FALSE<%
+                }
+                break;
+            default:
+                %><%= attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : 0  %><%
+        }
+        if(i < attributeNames.length - 1) {
+            %>,<%
+        } else {
+            %>).<%
+        }
+    }
+}
+if(isConnection){
+    pointerNames.splice(pointerNames.indexOf('src'),1);
+    pointerNames.splice(pointerNames.indexOf('dst'),1);
+}
+
+// pointer formula node
+if (pointerNames.length > 0) {
+%>
+Ptr_<%= convertName(id) %> is Ptr__<%= convertName(type.name) %>(<%
+    for (var i = 0; i < pointerNames.length; i += 1) {
+        %>"<%= pointers[pointerNames[i]].value ? pointers[pointerNames[i]].value : 'NULL' %>"<%
+        if(i < pointerNames.length - 1) {
+            %>,<%
+        } else {
+            %>).<%
+        }
+    }
+}
+
+%>
+Node_<%=convertName(id)%> is __<%=
+convertName(type.name)%>("<%= id %>" , <%=
+base === 'NULL' ? base : 'Node_'+convertName(base) %> , <%=
+parent === 'NULL' || parent === '' ? 'NULL' : 'Node_'+convertName(parent) %> , "<%=
+name %>"<% if(isConnection || attributeNames.length || pointerNames.length) { %> , <% } else { %>).<% }
+if(isConnection){
+%><%=
+    typeof pointers['src'] === 'string' ?'Node_'+convertName(pointers['src']) : 'NULL' %> , <%=
+    typeof pointers['dst'] === 'string' ?'Node_'+convertName(pointers['dst']) : 'NULL' %><%
+    if(attributeNames.length || pointerNames.length) { %> , <% } else { %>).<% }
+}
+if(attributeNames.length){
+    %>Attr_<%= convertName(id) %><% if(pointerNames.length) { %> , <% } else { %>).<% }
+}
+if(pointerNames.length){
+    %>Ptr_<%= convertName(id) %>).<%
+}
+%>
