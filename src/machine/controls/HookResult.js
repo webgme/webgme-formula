@@ -12,11 +12,13 @@ function create(data, callback) {
 
     data.created = Date.now();
 
-    model.create(data)
-        .then(function (newResultEntry) {
-            deferred.resolve(newResultEntry._id);
-        })
-        .catch(deferred.reject);
+    model.create(data, function (err, result) {
+        if (err) {
+            deferred.reject(err);
+            return;
+        }
+        deferred.resolve(result._id);
+    });
 
     return deferred.promise.nodeify(callback);
 }

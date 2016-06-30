@@ -13,13 +13,13 @@ function create(data) {
     data.created = Date.now();
 
     model.create(data, function (err, result) {
-        if(err){
+        if (err) {
             deferred.reject(err);
             return;
         }
         // removing the version
         result.__v = undefined; //delete mysteriously not working
-        
+
         deferred.resolve(result);
     });
 
@@ -49,11 +49,14 @@ function remove(id, callback) {
 function update(id, newData, callback) {
     var deferred = Q.defer();
 
-    model.findOneAndUpdate({id: id}, newData, {new: true})
-        .then(function (newEntry) {
-            deferred.resolve();
-        })
-        .catch(deferred.reject);
+    model.findOneAndUpdate({id: id}, newData, {new: true}, function (err, newEntry) {
+        if (err) {
+            deferred.reject(err);
+            return;
+        }
+
+        deferred.resolve(newEntry);
+    });
 
     return deferred.promise.nodeify(callback);
 }

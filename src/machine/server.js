@@ -3,17 +3,24 @@
  */
 
 function executeHook(eventData) {
-    var deferred = Q.defer();
+    var deferred = Q.defer(),
+        directory,
+        result;
 
     generate4ml(eventData)
-        .then(function (formulaModule) {
-            return prepareFormula(eventData.id, formulaModule);
+        .then(function (formulaData) {
+            return prepareFormula(eventData.id, formulaData);
         })
-        .then(function (directory) {
+        .then(function (directory_) {
+            directory = directory_;
             return executeFormulaTasks(directory);
         })
-        .then(function (directory) {
+        .then(function (result_) {
+            result = result_;
             return cleanFormula(directory);
+        })
+        .then(function () {
+            return storeHookResult(eventData.id, result);
         })
         .then(deferred.resolve)
         .catch(deferred.reject);
@@ -31,14 +38,10 @@ function generate4ml(parameters) {
                 deferred.reject(err);
                 return;
             }
-            if (result.success && result.artifacts.length === 1) {
-                console.log(result);
-                blob.getObjectAsString(result.artifacts[0], function (err, result) {
-                    if (err) {
-                        deferred.reject(err);
-                        return;
-                    }
-                    deferred.resolve(result);
+            if (result.success && result.messages.length === 2) {
+                deferred.resolve({
+                    project: result.messages[0].message,
+                    constraints: result.messages[1].message
                 });
             }
         }
@@ -46,7 +49,7 @@ function generate4ml(parameters) {
     return deferred.promise;
 }
 
-function prepareFormula(id, formulaModule) {
+function prepareFormula(id, formulaData) {
     var deferred = Q.defer(),
         fileCounter = 2,
         directory = './' + id,
@@ -65,7 +68,7 @@ function prepareFormula(id, formulaModule) {
             return;
         }
 
-        FS.writeFile(PATH.join(directory, '/module.4ml'), formulaModule, function (err) {
+        FS.writeFile(PATH.join(directory, '/module.4ml'), formulaData.project, function (err) {
             error = error || err;
             if (--fileCounter === 0) {
                 allDone();
@@ -73,7 +76,7 @@ function prepareFormula(id, formulaModule) {
         });
 
         //file for constraints
-        FS.writeFile(PATH.join(directory, '/constraints.json'), '["AddedReader"]', function (err) {
+        FS.writeFile(PATH.join(directory, '/constraints.json'), formulaData.constraints, function (err) {
             error = error || err;
             if (--fileCounter === 0) {
                 allDone();
@@ -119,9 +122,17 @@ function executeFormulaTasks(directory) {
         executeConstraints(directory)
     ])
         .then(function (results) {
-            console.log(results);
+            var output = {};
 
-            deferred.resolve(directory);
+            // Constraint results
+            if (results[0].state === 'rejected') {
+                logger.error('cannot get constraint results:', results[0].reason);
+                deferred.reject(new Error('failed to check constraints'));
+                return;
+            }
+            output.constraints = results[0].value;
+
+            deferred.resolve(output);
         });
     return deferred.promise;
 }
@@ -161,7 +172,7 @@ function executeConstraints(directory) {
 }
 
 function getIdFromHook(hook) {
-    return hook.projectId + '@' + hook.commitHash;
+    return hook.owner + '_' + hook.projectName + '_' + hook.commitHash.substr(1);
 }
 
 function storeCommitEvent(eventData) {
@@ -175,7 +186,21 @@ function storeCommitEvent(eventData) {
 
     return deferred.promise;
 }
+function storeHookResult(id, result) {
+    var deferred = Q.defer();
 
+    hookResults.create(result)
+        .then(function (resultId) {
+            return hooks.update(id, {result: resultId});
+        })
+        .then(function (newHookEntry) {
+            console.log('voila', newHookEntry);
+            deferred.resolve();
+        })
+        .catch(deferred.reject);
+
+    return deferred.promise;
+}
 var Express = require('express'),
     webgme = require('webgme'), //necessary to get a proper requireJS onto the global scope
     bodyParser = require('body-parser'),

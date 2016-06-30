@@ -16,7 +16,7 @@ define([
     'text!./Templates/language.4ml.ejs',
     'text!./Templates/node.4ml.ejs',
     'text!./Templates/project.4ml.ejs',
-    './FormulaDomainUtil'
+    './utils'
 ], function (PluginConfig,
              pluginMetadata,
              PluginBase,
@@ -25,7 +25,7 @@ define([
              languageTemplate,
              nodeTemplate,
              projectTemplate,
-             formulaUtils) {
+             utils) {
     'use strict';
 
     pluginMetadata = JSON.parse(pluginMetadata);
@@ -98,12 +98,6 @@ define([
 
         languageText = ejs.render(languageTemplate, languageParameters);
 
-        self.result.addMessage(new PluginMessage({
-            commitHash: self.commitHash,
-            activeNode: '', //always point to the root
-            message: languageText
-        }));
-
         self.core.traverse(self.rootNode, {excludeRoot: true}, function (visited, next) {
             // This is the visit function
             var nodeParameters = {
@@ -150,17 +144,25 @@ define([
                     },
                     projectText = ejs.render(projectTemplate, projectParameters);
 
-                console.log(projectText);
+                // The first message contains the formula project
                 self.result.addMessage(new PluginMessage({
                     commitHash: self.commitHash,
                     activeNode: '', //always point to the root
                     message: projectText
                 }));
 
+                // The second message contains the list of the names of the user defined constraints
+                self.result.addMessage(new PluginMessage({
+                    commitHash: self.commitHash,
+                    activeNode: '', //always point to the root
+                    message: JSON.stringify(utils.getUserConstraintNames(projectParameters.constraints))
+                }));
+
                 self.result.setSuccess(true);
                 callback(null, self.result);
             })
-            .catch(function (/*err*/) {
+            .catch(function (err) {
+                self.logger.error(err);
                 self.result.setSuccess(false);
                 callback(null, self.result);
             })

@@ -101,8 +101,8 @@ if (counter === numOfAttributes){ %>).<% }else{ %>,<% }
     counter = 0;
         for(var i in nodes[path].pointerNames){
     counter += 1;
-%> <%= nodes[path].pointerNames[i] %>:any GMENode + {NULL}> <%
-if (counter === numOfPointers){ %>).<% }else{ %>,<% }
+%> <%= nodes[path].pointerNames[i] %>: any GMENode + {NULL}<%
+if (counter === numOfPointers){ %>).<% }else{ %> , <% }
 } %> <% } %>
 <%= baseName %> ::= <% var types = collectInstanceTypes(); for(var i = 0;i < types.length;i += 1){ %> <%= types[i] %> +<% } %> __<%= baseName %>.
 // <%= nodes[path].name %> - end

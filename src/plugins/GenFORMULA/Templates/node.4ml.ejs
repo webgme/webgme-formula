@@ -5,7 +5,7 @@ function convertName(name) {
 // attribute formula node
 if (attributeNames.length > 0) {
 %>
-Attr_<%= convertName(id) %> is Attr__<%= convertName(type.name) %> (<%
+attr_<%= convertName(id) %> is Attr__<%= convertName(type.name) %> (<%
     for (var i = 0; i < attributeNames.length; i += 1) {
         switch(attributes[attributeNames[i]].type){
             case 'string':
@@ -37,9 +37,9 @@ if(isConnection){
 // pointer formula node
 if (pointerNames.length > 0) {
 %>
-Ptr_<%= convertName(id) %> is Ptr__<%= convertName(type.name) %>(<%
+ptr_<%= convertName(id) %> is Ptr__<%= convertName(type.name) %>(<%
     for (var i = 0; i < pointerNames.length; i += 1) {
-        %>"<%= pointers[pointerNames[i]].value ? pointers[pointerNames[i]].value : 'NULL' %>"<%
+        %><%= pointers[pointerNames[i]] ? 'node_'+convertName(pointers[pointerNames[i]]) : 'NULL' %><%
         if(i < pointerNames.length - 1) {
             %>,<%
         } else {
@@ -49,21 +49,21 @@ Ptr_<%= convertName(id) %> is Ptr__<%= convertName(type.name) %>(<%
 }
 
 %>
-Node_<%=convertName(id)%> is __<%=
+node_<%=convertName(id)%> is __<%=
 convertName(type.name)%>("<%= id %>" , <%=
-base === 'NULL' ? base : 'Node_'+convertName(base) %> , <%=
-parent === 'NULL' || parent === '' ? 'NULL' : 'Node_'+convertName(parent) %> , "<%=
+base === 'NULL' ? base : 'node_'+convertName(base) %> , <%=
+parent === 'NULL' || parent === '' ? 'NULL' : 'node_'+convertName(parent) %> , "<%=
 name %>"<% if(isConnection || attributeNames.length || pointerNames.length) { %> , <% } else { %>).<% }
 if(isConnection){
 %><%=
-    typeof pointers['src'] === 'string' ?'Node_'+convertName(pointers['src']) : 'NULL' %> , <%=
-    typeof pointers['dst'] === 'string' ?'Node_'+convertName(pointers['dst']) : 'NULL' %><%
+    typeof pointers['src'] === 'string' ?'node_'+convertName(pointers['src']) : 'NULL' %> , <%=
+    typeof pointers['dst'] === 'string' ?'node_'+convertName(pointers['dst']) : 'NULL' %><%
     if(attributeNames.length || pointerNames.length) { %> , <% } else { %>).<% }
 }
 if(attributeNames.length){
-    %>Attr_<%= convertName(id) %><% if(pointerNames.length) { %> , <% } else { %>).<% }
+    %>attr_<%= convertName(id) %><% if(pointerNames.length) { %> , <% } else { %>).<% }
 }
 if(pointerNames.length){
-    %>Ptr_<%= convertName(id) %>).<%
+    %>ptr_<%= convertName(id) %>).<%
 }
 %>
