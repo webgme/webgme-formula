@@ -11,9 +11,8 @@ var express = require('express'),
     StorageUtil = requireJS('common/storage/util'),
     Q = requireJS('q');
 
-function getFormulaRequest(authorizer, userId, params) {
+function checkAccess(authorizer, userId, projectId) {
     var deferred = Q.defer(),
-        projectId = StorageUtil.getProjectIdFromOwnerIdAndProjectName(params.ownerId, params.projectName),
         projectAuthParams = {
             entityType: authorizer.ENTITY_TYPES.PROJECT
         };
@@ -21,11 +20,7 @@ function getFormulaRequest(authorizer, userId, params) {
     authorizer.getAccessRights(userId, projectId, projectAuthParams)
         .then(function (projectAccess) {
             if (projectAccess && projectAccess.read) {
-                deferred.resolve({
-                    projectId: projectId,
-                    userId: userId,
-                    commitHash: params.commitHash
-                });
+                deferred.resolve();
             } else {
                 throw new Error('Not authorized to use FormulaMiddleware!');
             }
@@ -55,11 +50,19 @@ function initialize(middlewareOpts) {
     router.use('*', ensureAuthenticated);
 
     // all endpoints require read access to the given project
-    router.get('/:ownerId/:projectName/constraints/:commitHash', function (req, res) {
-        getFormulaRequest(authorizer, req.userData.userId, req.params)
-            .then(function (request) {
-                request.command = 'constraints';
-                res.send(request);
+    router.get('/:projectId/:commitHash', function (req, res) {
+        checkAccess(authorizer, req.userData.userId, req.params.projectId)
+            .then(function () {
+                superagent.get('http://localhost:9009/4ml/' + encodeURIComponent(req.params.projectId) + '/' +
+                    encodeURIComponent(req.params.commitHash))
+                    .end(function (err, result) {
+                        if (err) {
+                            res.status(500);
+                            res.send(err);
+                            return;
+                        }
+                        res.send(JSON.parse(result.text));
+                    });
             })
             .catch(function (err) {
                 res.status(403);

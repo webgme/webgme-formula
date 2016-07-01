@@ -4,6 +4,7 @@
  */
 
 var model,
+    resultModel,
     Q = require('q');
 
 function create(data) {
@@ -27,10 +28,21 @@ function create(data) {
 }
 function read(id, callback) {
     'use strict';
-    var deferred = Q.defer();
+    var deferred = Q.defer(),
+        hook;
 
     model.findOne({id: id})
-        .then(deferred.resolve)
+        .then(function (hook_) {
+            hook = hook_;
+            if (hook.result) {
+                return resultModel.findOne({_id: hook.result});
+            }
+            return Q(null);
+        })
+        .then(function (result) {
+            hook.result = result;
+            deferred.resolve(hook);
+        })
         .catch(deferred.reject);
 
     return deferred.promise.nodeify(callback);
@@ -64,6 +76,7 @@ function update(id, newData, callback) {
 module.exports = function (mongoose) {
     'use strict';
     model = mongoose.model('Hook', require('../models/Hook'));
+    resultModel = mongoose.model('HookResult', require('../models/HookResult'));
 
     return {
         create: create,

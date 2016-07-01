@@ -9,20 +9,13 @@ define([
     './FormulaCodeMirrorMode',
     'js/Loader/LoaderCircles',
     'js/DragDrop/DropTarget',
+    'plugin/GenFORMULA/GenFORMULA/utils',
     'text!./FormulaEditor.html'
-], function (CodeMirror, LoaderCircles, dropTarget, FormulaEditorHtml) {
+], function (CodeMirror, LoaderCircles, dropTarget, utils, FormulaEditorHtml) {
     'use strict';
 
     var FormulaEditorWidget,
         WIDGET_CLASS = 'formula-editor';
-
-    // TODO check if regular expression is correct and if it is fine here - no other users
-    function getConstraintNamesFromText(txt) {
-        var regExp = /\w+(?= *:-[\s\S]*\.)/g,
-            result = txt.match(regExp);
-
-        return result || [];
-    }
 
     function getConstraintResultElem(name, result) {
         if (result === true) {
@@ -142,11 +135,11 @@ define([
         this._previousCodeState = null;
 
         this._constraintList = this._el.find('#constraintlist').first();
-        this._checkContraintsBtn = this._el.find('#checkBtn').first();
-
-        this._checkContraintsBtn.on('click', function (event) {
-            self.onCheckConstraints(getConstraintNamesFromText(self._codemirror.getValue()));
-        });
+        // this._checkContraintsBtn = this._el.find('#checkBtn').first();
+        //
+        // this._checkContraintsBtn.on('click', function (event) {
+        //     self.onCheckConstraints(utils.getUserConstraintNames(self._codemirror.getValue()));
+        // });
         self._saveConstraintsBtn.attr('disabled', true);
 
         this._allOk = this._el.find('#allResultOk').first();
@@ -261,7 +254,7 @@ define([
     };
 
     FormulaEditorWidget.prototype.setResults = function (resultObject) {
-        var constraints = getConstraintNamesFromText(this._codemirror.getValue()).sort(),
+        var constraints = utils.getUserConstraintNames(this._codemirror.getValue()).sort(),
             i,
             allOk = true;
         this._loader.stop();

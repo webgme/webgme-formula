@@ -7,19 +7,27 @@ function executeHook(eventData) {
         directory,
         result;
 
+    console.time('plugin');
     generate4ml(eventData)
         .then(function (formulaData) {
+            console.timeEnd('plugin');
+            console.time('pre');
             return prepareFormula(eventData.id, formulaData);
         })
         .then(function (directory_) {
             directory = directory_;
+            console.timeEnd('pre');
+            console.time('4ml');
             return executeFormulaTasks(directory);
         })
         .then(function (result_) {
             result = result_;
+            console.timeEnd('4ml');
+            console.time('post');
             return cleanFormula(directory);
         })
         .then(function () {
+            console.timeEnd('post');
             return storeHookResult(eventData.id, result);
         })
         .then(deferred.resolve)
@@ -91,9 +99,8 @@ function cleanFormula(directory) {
     var deferred = Q.defer();
 
     FS.readdir(directory, function (err, files) {
-        deferred.resolve();
-        return;
         var i;
+
         if (err) {
             deferred.reject(err);
             return;
@@ -109,8 +116,9 @@ function cleanFormula(directory) {
             }
 
             deferred.resolve();
-        })
+        });
     });
+
     return deferred.promise;
 }
 
@@ -158,6 +166,9 @@ function executeConstraints(directory) {
 
                 try {
                     result = JSON.parse(resultAsString);
+                    for (var i in result) {
+                        result[i] = result[i] === 'true';
+                    }
                 } catch (err) {
                     deferred.reject(err);
                     return;
@@ -175,6 +186,10 @@ function getIdFromHook(hook) {
     return hook.owner + '_' + hook.projectName + '_' + hook.commitHash.substr(1);
 }
 
+function getIdFromGetRequest(projectId, commitHash) {
+    return projectId.replace("+", "_") + '_' + commitHash.substr(1);
+}
+
 function storeCommitEvent(eventData) {
     var deferred = Q.defer();
 
@@ -186,6 +201,7 @@ function storeCommitEvent(eventData) {
 
     return deferred.promise;
 }
+
 function storeHookResult(id, result) {
     var deferred = Q.defer();
 
@@ -193,14 +209,14 @@ function storeHookResult(id, result) {
         .then(function (resultId) {
             return hooks.update(id, {result: resultId});
         })
-        .then(function (newHookEntry) {
-            console.log('voila', newHookEntry);
+        .then(function (/*newHookEntry*/) {
             deferred.resolve();
         })
         .catch(deferred.reject);
 
     return deferred.promise;
 }
+
 var Express = require('express'),
     webgme = require('webgme'), //necessary to get a proper requireJS onto the global scope
     bodyParser = require('body-parser'),
@@ -216,16 +232,14 @@ var Express = require('express'),
     __httpServer,
     mongoose = require('mongoose'),
     hooks,
-    hookResults,
-    Blob = require('webgme/src/server/middleware/blob/BlobClientWithFSBackend'),
-    blob,
-    GUID = requireJS('common/util/guid');
+    hookResults;
 
 __router.use(bodyParser.json({limit: '900mb'}));
 
 // This route should be used to trigger hook handling
 __router.post('/4ml', function (req, res) {
     if (req && req.body && req.body.hookId === config.hookId) {
+        console.time('hook');
         storeCommitEvent(req.body)
             .then(function (newHookEntry) {
                 res.sendStatus(200);
@@ -233,9 +247,11 @@ __router.post('/4ml', function (req, res) {
             })
             .then(function () {
                 //TODO do we need any postprocessing??
+                console.timeEnd('hook');
             })
             .catch(function (err) {
-                console.log(err);
+                console.timeEnd('hook');
+                logger.error(err);
                 res.status(500);
                 res.send(err);
             });
@@ -248,6 +264,13 @@ __router.post('/4ml', function (req, res) {
 // This is for re-execution of a specific hook
 __router.put('/4ml', function (req, res) {
     if (req && req.body) {
+        reExecuteHook(req.body)
+            .then(function () {
+
+            })
+            .catch(function (err) {
+                res.status(500);
+            })
         storeCommitEvent(req.body)
             .then(function () {
                 res.sendStatus(200);
@@ -267,13 +290,19 @@ __router.put('/4ml', function (req, res) {
 });
 
 // This is to get specific data from a hook-result
-__router.get('/4ml', function (req, res) {
-    if (req && req.body) {
+__router.get('/4ml/:projectId/:commitHash', function (req, res) {
+    var id = getIdFromGetRequest(req.params.projectId, req.params.commitHash);
 
-    } else {
-        logger.info('unknown GET request');
-        res.sendStatus(400);
-    }
+    hooks.read(id)
+        .then(function (hookEntry) {
+            console.log('READ:', hookEntry);
+            res.send(hookEntry);
+        })
+        .catch(function (err) {
+            logger.error('Get request failed:', err);
+            res.status(500);
+            res.send(err);
+        });
 });
 
 __httpServer = require('http').createServer(__router);
@@ -310,6 +339,5 @@ __httpServer.listen(config.port, function (err) {
     hookResults = require('./controls/HookResult')(mongoose);
 
     process.chdir('../../');
-    blob = new Blob(webgme.getGmeConfig(), logger.fork('Blob'));
 
 });

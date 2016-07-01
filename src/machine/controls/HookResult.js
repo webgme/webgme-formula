@@ -27,7 +27,10 @@ function read(id, callback) {
     var deferred = Q.defer();
 
     model.findOne({_id: id})
-        .then(deferred.resolve)
+        .then(function (result) {
+            result.__v = undefined;
+            deferred.resolve(result);
+        })
         .catch(deferred.reject);
 
     return deferred.promise.nodeify(callback);

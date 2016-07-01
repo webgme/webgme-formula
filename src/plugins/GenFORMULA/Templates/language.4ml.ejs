@@ -110,16 +110,16 @@ if (counter === numOfPointers){ %>).<% }else{ %> , <% }
 }
 %>
 // The superset of all node types: GMENode.
-GMENode ::=<%
+GMENode ::= <%
 for(var i = 0;i < allTypes.length;i += 1){
-%> <%= allTypes[i] %> <% if(i < allTypes.length - 1){ %>+<% }else{ %>.<% }
+%><%= allTypes[i] %><% if(i < allTypes.length - 1){ %> + <% }else{ %>.<% }
 }
 %>
 
 // The superset of all connection types: GMEConnection.
 GMEConnection ::=<%
 for(var i = 0;i < connectionTypes.length;i += 1){
-%> <%= connectionTypes[i] %> <% if(i < connectionTypes.length - 1){ %>+<% }else{ %>.<% }
+%><%= connectionTypes[i] %><% if(i < connectionTypes.length - 1){ %> + <% }else{ %>.<% }
 }
 %>
 

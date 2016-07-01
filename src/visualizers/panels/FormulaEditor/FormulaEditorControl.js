@@ -7,11 +7,13 @@
 define(['js/Constants',
     'js/Utils/GMEConcepts',
     'js/NodePropertyNames',
-    'plugin/Export2FORMULA/Export2FORMULA/FormulaDomainUtil'
+    'plugin/GenFORMULA/GenFORMULA/utils',
+    'superagent'
 ], function (CONSTANTS,
              GMEConcepts,
              nodePropertyNames,
-             formulaDomainUtil) {
+             utils,
+             superagent) {
 
     'use strict';
 
@@ -32,6 +34,8 @@ define(['js/Constants',
         this._initWidgetEventHandlers();
 
         // this._widget.setTitle('FormulaEditor');
+
+        this._result = {state: null, projectId: null, commitHash: null, result: null};
 
         //setting up UI toward the client and the territory
         this._territoryId = this._client.addUI(self, function (events) {
@@ -140,7 +144,7 @@ define(['js/Constants',
     };
 
     FormulaEditorControl.prototype._refreshConstraints = function () {
-        this._widget.setDomain(formulaDomainUtil.getDomain(this._client, this._client.getAllMetaNodes()));
+        this._widget.setDomain(utils.getLanguageAsString(this._client, this._client.getAllMetaNodes()));
         var node = this._client.getNode(CONSTANTS.PROJECT_ROOT_ID);
 
         if (node) {
@@ -150,35 +154,76 @@ define(['js/Constants',
         }
     };
 
+    // FormulaEditorControl.prototype._getSimpleResults = function () {
+    //     // this._widget.setResults('checking');
+    //     // now we check if we have results
+    //     var self = this,
+    //         project = self._client.getProjectObject(),
+    //         rootNode = self._client.getNode(CONSTANTS.PROJECT_ROOT_ID),
+    //         formulaInfo;
+    //
+    //     this._widget.setResults({}); //initializing results
+    //
+    //     if (rootNode) {
+    //         formulaInfo = rootNode.getAttribute('_formulaInfo');
+    //         if (formulaInfo && typeof formulaInfo.originCommitHash === 'string' &&
+    //             Object.keys(formulaInfo.simpleCheckResults || {}).length !== 0) {
+    //             // we have results and a possible origin commit hash so let's check it out
+    //             project.loadObject(self._client.getActiveCommitHash(), function (err, commitObj) {
+    //                 if (err) {
+    //                     self._logger.error(err);
+    //                 } else {
+    //                     if (commitObj.parents && commitObj.parents.indexOf(formulaInfo.originCommitHash) > -1 &&
+    //                         commitObj.parents.length === 1) {
+    //                         self._widget.setResults(formulaInfo.simpleCheckResults);
+    //                     }
+    //                 }
+    //             });
+    //         }
+    //     }
+    // };
+
     FormulaEditorControl.prototype._getSimpleResults = function () {
-        // this._widget.setResults('checking');
-        // now we check if we have results
         var self = this,
-            project = self._client.getProjectObject(),
-            rootNode = self._client.getNode(CONSTANTS.PROJECT_ROOT_ID),
-            formulaInfo;
+            commitHash = self._client.getActiveCommitHash(),
+            projectId = self._client.getActiveProjectId(),
+            interval,
+            waiting = false;
 
-        this._widget.setResults({}); //initializing results
+        self._result.state = 'collecting';
+        self._result.projectId = projectId;
+        self._result.commitHash = commitHash;
 
-        if (rootNode) {
-            formulaInfo = rootNode.getAttribute('_formulaInfo');
-            if (formulaInfo && typeof formulaInfo.originCommitHash === 'string' &&
-                Object.keys(formulaInfo.simpleCheckResults || {}).length !== 0) {
-                // we have results and a possible origin commit hash so let's check it out
-                project.loadObject(self._client.getActiveCommitHash(), function (err, commitObj) {
-                    if (err) {
-                        self._logger.error(err);
-                    } else {
-                        if (commitObj.parents && commitObj.parents.indexOf(formulaInfo.originCommitHash) > -1 &&
-                            commitObj.parents.length === 1) {
-                            self._widget.setResults(formulaInfo.simpleCheckResults);
+        self._widget.setResults({}); // TODO we should state that we are loading the results
+        interval = setInterval(function () {
+            if (!waiting) {
+                waiting = true;
+                superagent.get('4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
+                    .end(function (err, result) {
+                        waiting = false;
+                        // First, we check if our version is still the one to show
+                        if (commitHash !== self._result.commitHash || projectId !== self._result.projectId) {
+                            clearInterval(interval);
+                            return;
                         }
-                    }
-                });
-            }
-        }
-    };
 
+                        result = JSON.parse(result.text).result;
+
+                        // Then, we check how to handle the result
+                        if (err) {
+                            // TODO we should state the error/retry
+                        } else {
+                            if (result === null) {
+                                // TODO we should state that the result is under computation
+                            } else {
+                                clearInterval(interval);
+                                self._widget.setResults(result.constraints);
+                            }
+                        }
+                    });
+            }
+        }, 1000);
+    };
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaEditorControl.prototype._eventCallback = function (events) {
         var i = events ? events.length : 0,
