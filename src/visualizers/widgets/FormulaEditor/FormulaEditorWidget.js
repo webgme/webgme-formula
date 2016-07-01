@@ -155,7 +155,7 @@ define([
                 // console.log('out: ', event, dragInfo);
             },
             drop: function (event, dragInfo) {
-                console.log('drop: ', event, dragInfo);
+                // console.log('drop: ', event, dragInfo);
                 var cursor = self._codemirror.getCursor(),
                     metaName,
                     nodeName,

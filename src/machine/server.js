@@ -7,27 +7,27 @@ function executeHook(eventData) {
         directory,
         result;
 
-    console.time('plugin');
+    // console.time('plugin');
     generate4ml(eventData)
         .then(function (formulaData) {
-            console.timeEnd('plugin');
-            console.time('pre');
+            // console.timeEnd('plugin');
+            // console.time('pre');
             return prepareFormula(eventData.id, formulaData);
         })
         .then(function (directory_) {
             directory = directory_;
-            console.timeEnd('pre');
-            console.time('4ml');
+            // console.timeEnd('pre');
+            // console.time('4ml');
             return executeFormulaTasks(directory);
         })
         .then(function (result_) {
             result = result_;
-            console.timeEnd('4ml');
-            console.time('post');
+            // console.timeEnd('4ml');
+            // console.time('post');
             return cleanFormula(directory);
         })
         .then(function () {
-            console.timeEnd('post');
+            // console.timeEnd('post');
             return storeHookResult(eventData.id, result);
         })
         .then(deferred.resolve)
@@ -239,7 +239,7 @@ __router.use(bodyParser.json({limit: '900mb'}));
 // This route should be used to trigger hook handling
 __router.post('/4ml', function (req, res) {
     if (req && req.body && req.body.hookId === config.hookId) {
-        console.time('hook');
+        // console.time('hook');
         storeCommitEvent(req.body)
             .then(function (newHookEntry) {
                 res.sendStatus(200);
@@ -247,10 +247,9 @@ __router.post('/4ml', function (req, res) {
             })
             .then(function () {
                 //TODO do we need any postprocessing??
-                console.timeEnd('hook');
+                // console.timeEnd('hook');
             })
             .catch(function (err) {
-                console.timeEnd('hook');
                 logger.error(err);
                 res.status(500);
                 res.send(err);
@@ -295,7 +294,6 @@ __router.get('/4ml/:projectId/:commitHash', function (req, res) {
 
     hooks.read(id)
         .then(function (hookEntry) {
-            console.log('READ:', hookEntry);
             res.send(hookEntry);
         })
         .catch(function (err) {
