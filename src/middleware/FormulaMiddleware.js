@@ -51,49 +51,37 @@ function initialize(middlewareOpts) {
 
     // all endpoints require read access to the given project
     router.get('/:projectId/:commitHash', function (req, res) {
-        checkAccess(authorizer, req.userData.userId, req.params.projectId)
-            .then(function () {
-                superagent.get('http://localhost:9009/4ml/' + encodeURIComponent(req.params.projectId) + '/' +
-                    encodeURIComponent(req.params.commitHash))
-                    .end(function (err, result) {
-                        if (err) {
-                            res.status(500);
-                            res.send(err);
-                            return;
-                        }
-                        res.send(JSON.parse(result.text));
+        superagent.get('http://localhost:' + middlewareOpts.gmeConfig.server.port + '/api/componentSettings/FormulaEditor')
+            .end(function (err, result) {
+                var config = result ? JSON.parse(result.text || '{}') : {};
+
+                config.baseUrl = config.baseUrl || 'http://localhost:9009/4ml';
+                checkAccess(authorizer, req.userData.userId, req.params.projectId)
+                    .then(function () {
+                        superagent.get(config.baseUrl + '/' + encodeURIComponent(req.params.projectId) + '/' +
+                            encodeURIComponent(req.params.commitHash))
+                            .end(function (err, result) {
+                                if (err) {
+                                    if (err.message.indexOf('Not found') !== -1) {
+                                        res.status(404);
+                                    } else {
+                                        logger.error('Error during result query:', err);
+                                        res.status(500);
+                                    }
+                                    res.send(err);
+                                    return;
+                                }
+                                res.send(JSON.parse(result.text));
+                            });
+                    })
+                    .catch(function (err) {
+                        logger.info('User doesn\'t have necessary rights to access results.', err);
+                        res.status(403);
+                        res.send(err);
                     });
-            })
-            .catch(function (err) {
-                res.status(403);
-                res.send(err);
             });
 
     });
-
-    router.get('/getExample', function (req, res/*, next*/) {
-        var userId = getUserId(req);
-
-        res.json({userId: userId, message: 'get request was handled'});
-    });
-
-    router.patch('/patchExample', function (req, res/*, next*/) {
-        res.sendStatus(200);
-    });
-
-    router.post('/postExample', function (req, res/*, next*/) {
-        res.sendStatus(201);
-    });
-
-    router.delete('/deleteExample', function (req, res/*, next*/) {
-        res.sendStatus(204);
-    });
-
-    router.get('/error', function (req, res, next) {
-        next(new Error('error example'));
-    });
-
-    logger.debug('ready');
 }
 
 module.exports = {

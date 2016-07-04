@@ -53,3 +53,8 @@
 .formula-editor .all-ok {
     color: #008000;
 }
+
+.formula-editor .hook-btn {
+    position: absolute;
+    right: 10px;
+}

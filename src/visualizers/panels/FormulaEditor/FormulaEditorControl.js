@@ -8,16 +8,20 @@ define(['js/Constants',
     'js/Utils/GMEConcepts',
     'js/NodePropertyNames',
     'plugin/GenFORMULA/GenFORMULA/utils',
-    'superagent'
+    'superagent',
+    'text!api/componentSettings/FormulaEditor'
 ], function (CONSTANTS,
              GMEConcepts,
              nodePropertyNames,
              utils,
-             superagent) {
+             superagent,
+             componentConfig) {
 
     'use strict';
 
     var FormulaEditorControl;
+
+    componentConfig = JSON.parse(componentConfig || {});
 
     FormulaEditorControl = function (options) {
         var self = this;
@@ -96,6 +100,25 @@ define(['js/Constants',
                 });
             });
         };
+
+        this._widget.onHookStateChanged = function (newSate) {
+            if (newSate === 'on') {
+                // We have to set the hook for the project
+                self._setHook(function (err) {
+                    if (err) {
+                        self._logger('Failed to set hook:', err);
+                        self._widget.setHookStatus('error');
+                    }
+                });
+            } else {
+                self._deleteHook(function (err) {
+                    if (err) {
+                        self._logger('Failed to remove hook:', err);
+                        self._widget.setHookStatus('error');
+                    }
+                });
+            }
+        };
     };
 
     /* * * * * * * * Visualizer content update callbacks * * * * * * * */
@@ -103,6 +126,16 @@ define(['js/Constants',
     // defines the parts of the project that the visualizer is interested in
     // (this allows the browser to then only load those relevant parts).
     FormulaEditorControl.prototype.selectedObjectChanged = function (nodeId) {
+        var self = this;
+
+        self._getCurrentHook(function (err, hook) {
+            if (!err) {
+                self._widget.setHookStatus('on');
+            } else {
+                self._widget.setHookStatus('off');
+            }
+        });
+
         // var desc = this._getObjectDescriptor(nodeId),
         //     self = this;
         //
@@ -207,12 +240,19 @@ define(['js/Constants',
                             return;
                         }
 
-                        result = JSON.parse(result.text).result;
-
                         // Then, we check how to handle the result
                         if (err) {
                             // TODO we should state the error/retry
+                            // console.log(err.message.indexOf('Internal Server Error') !== -1);
+
+                            if (err.message.indexOf('Internal Server Error') !== -1 ||
+                                err.message.indexOf('Forbidden') !== -1) {
+                                //there will be no better result
+                                clearInterval(interval);
+                            }
                         } else {
+                            result = JSON.parse(result.text).result;
+
                             if (result === null) {
                                 // TODO we should state that the result is under computation
                             } else {
@@ -271,6 +311,41 @@ define(['js/Constants',
         } else {
             this.selectedObjectChanged(activeObjectId);
         }
+    };
+
+    FormulaEditorControl.prototype._getCurrentHook = function (callback) {
+        var projectId = (this._client.getActiveProjectId() || "").replace('+', '/');
+        superagent.get('/api/projects/' + projectId + '/hooks/FormulaMachineHook')
+            .end(function (err, result) {
+                if (err) {
+                    result = {};
+                }
+                result = JSON.parse(result.text || '{}');
+                callback(err, result);
+            });
+    };
+
+    FormulaEditorControl.prototype._setHook = function (callback) {
+        var projectId = (this._client.getActiveProjectId() || "").replace('+', '/');
+        superagent.put('/api/projects/' + projectId + '/hooks/FormulaMachineHook')
+            .send({
+                events: [
+                    'COMMIT'
+                ],
+                url: componentConfig.baseUrl || 'http://localhost:9009/4ml',
+                description: 'Hook to external formula machine to allow automated checking.'
+            })
+            .end(function (err/*, result*/) {
+                callback(err);
+            });
+    };
+
+    FormulaEditorControl.prototype._deleteHook = function (callback) {
+        var projectId = (this._client.getActiveProjectId() || "").replace('+', '/');
+        superagent.delete('/api/projects/' + projectId + '/hooks/FormulaMachineHook')
+            .end(function (err/*, result*/) {
+                callback(err);
+            });
     };
 
     /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */

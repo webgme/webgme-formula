@@ -61,6 +61,20 @@ define([
             self.setResults({}); // constraints probably changed so we clear the results
         });
 
+        this._hookStatusBtn = this._el.find('#hookStatusBtn').first();
+        this._hookStatusBtnIcon = this._hookStatusBtn.children().first();
+        this._hookStatus = 'off';
+        this._hookStatusBtn.attr('title', 'Turn on automatic checking');
+        this._hookStatusBtn.on('click', function (/*event*/) {
+            if (self._hookStatus === 'off') {
+                self.setHookStatus('on');
+                self.onHookStateChanged('on');
+            } else {
+                self.setHookStatus('off');
+                self.onHookStateChanged('off');
+            }
+        });
+
         // adding domain and its own codemirror
         this._domainBtn = this._el.find('#domainBtn').first();
         this._domainMirrorEl = this._el.find('#domainarea').first();
@@ -283,6 +297,30 @@ define([
         this.setResults({});
         this._loader.start();
     };
+
+    FormulaEditorWidget.prototype.setHookStatus = function (newState) {
+        this._hookStatusBtnIcon.removeClass('glyphicon-ban-circle');
+        this._hookStatusBtnIcon.removeClass('glyphicon-remove-circle');
+        this._hookStatusBtnIcon.removeClass('glyphicon-ok-circle');
+
+        switch (newState) {
+            case 'off':
+                this._hookStatusBtnIcon.addClass('glyphicon-ban-circle');
+                this._hookStatusBtn.attr('title', 'Turn on automatic checking');
+                this._hookStatus = 'off';
+                break;
+            case 'on':
+                this._hookStatusBtnIcon.addClass('glyphicon glyphicon-ok-circle');
+                this._hookStatusBtn.attr('title', 'Turn off automatic checking');
+                this._hookStatus = 'off';
+                break;
+            case 'error':
+                this._hookStatusBtnIcon.addClass('glyphicon glyphicon-remove-circle');
+                this._hookStatusBtn.attr('title', 'Turn off automatic checking');
+                this._hookStatus = 'error';
+
+        }
+    };
     /* * * * * * * * Visualizer event handlers * * * * * * * */
 
     FormulaEditorWidget.prototype.onCheckConstraints = function () {
@@ -293,6 +331,9 @@ define([
         this._logger.warn('The "onSaveConstraints" function is not overwritten');
     };
 
+    FormulaEditorWidget.prototype.onHookStateChanged = function () {
+        this._logger.warn('The "onHookStateChanged" function is not overwritten');
+    };
     /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
     FormulaEditorWidget.prototype.destroy = function () {
         this._stopAutoSave();
