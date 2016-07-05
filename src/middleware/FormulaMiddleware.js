@@ -84,7 +84,26 @@ function initialize(middlewareOpts) {
     });
 }
 
+/**
+ * Called before the server starts listening.
+ * @param {function} callback
+ */
+function start(callback) {
+    callback();
+}
+
+/**
+ * Called after the server stopped listening.
+ * @param {function} callback
+ */
+function stop(callback) {
+    callback();
+}
+
+
 module.exports = {
     initialize: initialize,
-    router: router
+    router: router,
+    start: start,
+    stop: stop
 };
