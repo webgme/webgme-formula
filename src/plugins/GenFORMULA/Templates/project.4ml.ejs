@@ -1,0 +1,16 @@
+// Project name: <%= projectName %>
+// Commit     : <%= commitHash %>
+<%- language %>
+
+domain Constraints extends Language {
+<%- constraints %>
+}
+
+model M of Constraints {
+<%
+for(var i=0;i<nodes.length;i+=1){
+    %>
+<%- nodes[i] %><%
+}
+%>
+}

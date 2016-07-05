@@ -8,11 +8,13 @@
 define([
     'plugin/PluginConfig',
     'plugin/PluginBase',
+    'plugin/PluginMessage',
     'text!./metadata.json',
     'common/util/ejs',
     'plugin/Export2FORMULA/Export2FORMULA/Templates/Templates'
 ], function (PluginConfig,
              PluginBase,
+             PluginMessage,
              pluginMetadata,
              ejs,
              TEMPLATES) {
@@ -218,6 +220,15 @@ define([
                     });
                 });
             } else {
+
+                var formulaProject = {module: templateC, constraints: '["something"]'};
+
+                //this message is a hack so we ditch using the blob
+                self.result.addMessage(new PluginMessage({
+                    commitHash: self.commitHash,
+                    activeNode: '', //always point to the root
+                    message: JSON.stringify(formulaProject)
+                }));
                 self.blobClient.putFile('model.4ml', templateC, function (err, hash) {
                     if (err) {
                         callback(err, self.result);

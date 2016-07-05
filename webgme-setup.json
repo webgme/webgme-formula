@@ -12,6 +12,10 @@
       "CheckFORMULA": {
         "src": "src/plugins/CheckFORMULA",
         "test": "test/plugins/CheckFORMULA"
+      },
+      "GenFORMULA": {
+        "src": "src/plugins/GenFORMULA",
+        "test": "test/plugins/GenFORMULA"
       }
     },
     "addons": {},

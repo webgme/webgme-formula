@@ -114,7 +114,6 @@ define([
                         return;
                     }
 
-                    console.log(result.body, ' -- ', Object.keys(result.body).length);
                     simpleResults = result.body;
 
                     for (constraintName in simpleResults) {

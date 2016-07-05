@@ -9,20 +9,13 @@ define([
     './FormulaCodeMirrorMode',
     'js/Loader/LoaderCircles',
     'js/DragDrop/DropTarget',
+    'plugin/GenFORMULA/GenFORMULA/utils',
     'text!./FormulaEditor.html'
-], function (CodeMirror, LoaderCircles, dropTarget, FormulaEditorHtml) {
+], function (CodeMirror, LoaderCircles, dropTarget, utils, FormulaEditorHtml) {
     'use strict';
 
     var FormulaEditorWidget,
         WIDGET_CLASS = 'formula-editor';
-
-    // TODO check if regular expression is correct and if it is fine here - no other users
-    function getConstraintNamesFromText(txt) {
-        var regExp = /\w+(?= *:-[\s\S]*\.)/g,
-            result = txt.match(regExp);
-
-        return result || [];
-    }
 
     function getConstraintResultElem(name, result) {
         if (result === true) {
@@ -66,6 +59,20 @@ define([
             self.onSaveConstraints(self._previousCodeState);
             self._saveConstraintsBtn.attr('disabled', true);
             self.setResults({}); // constraints probably changed so we clear the results
+        });
+
+        this._hookStatusBtn = this._el.find('#hookStatusBtn').first();
+        this._hookStatusBtnIcon = this._hookStatusBtn.children().first();
+        this._hookStatus = 'off';
+        this._hookStatusBtn.attr('title', 'Turn on automatic checking');
+        this._hookStatusBtn.on('click', function (/*event*/) {
+            if (self._hookStatus === 'off') {
+                self.setHookStatus('on');
+                self.onHookStateChanged('on');
+            } else {
+                self.setHookStatus('off');
+                self.onHookStateChanged('off');
+            }
         });
 
         // adding domain and its own codemirror
@@ -142,11 +149,11 @@ define([
         this._previousCodeState = null;
 
         this._constraintList = this._el.find('#constraintlist').first();
-        this._checkContraintsBtn = this._el.find('#checkBtn').first();
-
-        this._checkContraintsBtn.on('click', function (event) {
-            self.onCheckConstraints(getConstraintNamesFromText(self._codemirror.getValue()));
-        });
+        // this._checkContraintsBtn = this._el.find('#checkBtn').first();
+        //
+        // this._checkContraintsBtn.on('click', function (event) {
+        //     self.onCheckConstraints(utils.getUserConstraintNames(self._codemirror.getValue()));
+        // });
         self._saveConstraintsBtn.attr('disabled', true);
 
         this._allOk = this._el.find('#allResultOk').first();
@@ -162,7 +169,7 @@ define([
                 // console.log('out: ', event, dragInfo);
             },
             drop: function (event, dragInfo) {
-                console.log('drop: ', event, dragInfo);
+                // console.log('drop: ', event, dragInfo);
                 var cursor = self._codemirror.getCursor(),
                     metaName,
                     nodeName,
@@ -261,7 +268,7 @@ define([
     };
 
     FormulaEditorWidget.prototype.setResults = function (resultObject) {
-        var constraints = getConstraintNamesFromText(this._codemirror.getValue()).sort(),
+        var constraints = utils.getUserConstraintNames(this._codemirror.getValue()).sort(),
             i,
             allOk = true;
         this._loader.stop();
@@ -290,6 +297,30 @@ define([
         this.setResults({});
         this._loader.start();
     };
+
+    FormulaEditorWidget.prototype.setHookStatus = function (newState) {
+        this._hookStatusBtnIcon.removeClass('glyphicon-ban-circle');
+        this._hookStatusBtnIcon.removeClass('glyphicon-remove-circle');
+        this._hookStatusBtnIcon.removeClass('glyphicon-ok-circle');
+
+        switch (newState) {
+            case 'off':
+                this._hookStatusBtnIcon.addClass('glyphicon-ban-circle');
+                this._hookStatusBtn.attr('title', 'Turn on automatic checking');
+                this._hookStatus = 'off';
+                break;
+            case 'on':
+                this._hookStatusBtnIcon.addClass('glyphicon glyphicon-ok-circle');
+                this._hookStatusBtn.attr('title', 'Turn off automatic checking');
+                this._hookStatus = 'off';
+                break;
+            case 'error':
+                this._hookStatusBtnIcon.addClass('glyphicon glyphicon-remove-circle');
+                this._hookStatusBtn.attr('title', 'Turn off automatic checking');
+                this._hookStatus = 'error';
+
+        }
+    };
     /* * * * * * * * Visualizer event handlers * * * * * * * */
 
     FormulaEditorWidget.prototype.onCheckConstraints = function () {
@@ -300,6 +331,9 @@ define([
         this._logger.warn('The "onSaveConstraints" function is not overwritten');
     };
 
+    FormulaEditorWidget.prototype.onHookStateChanged = function () {
+        this._logger.warn('The "onHookStateChanged" function is not overwritten');
+    };
     /* * * * * * * * Visualizer life cycle callbacks * * * * * * * */
     FormulaEditorWidget.prototype.destroy = function () {
         this._stopAutoSave();
