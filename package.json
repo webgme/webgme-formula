@@ -17,7 +17,7 @@
     "winston": "^2.2.0"
   },
   "peerDependencies": {
-    "webgme": "https://github.com/webgme/webgme#master"
+    "webgme": "^2.2.0"
   },
   "devDependencies": {
     "chai": "^3.0.0",
