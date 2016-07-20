@@ -298,7 +298,11 @@ __router.get('/4ml/:projectId/:commitHash', function (req, res) {
         })
         .catch(function (err) {
             logger.error('Get request failed:', err);
-            res.status(500);
+            if (err.message === 'cannot find hook data') {
+                res.status(404);
+            } else {
+                res.status(500);
+            }
             res.send(err);
         });
 });

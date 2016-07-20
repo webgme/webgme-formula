@@ -34,10 +34,14 @@ function read(id, callback) {
     model.findOne({id: id})
         .then(function (hook_) {
             hook = hook_;
-            if (hook.result) {
-                return resultModel.findOne({_id: hook.result});
+            if (hook) {
+                if (hook.result) {
+                    return resultModel.findOne({_id: hook.result});
+                }
+                return Q(null);
+            } else {
+                throw new Error('cannot find hook data');
             }
-            return Q(null);
         })
         .then(function (result) {
             hook.result = result;

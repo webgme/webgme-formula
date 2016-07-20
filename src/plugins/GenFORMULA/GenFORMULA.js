@@ -100,6 +100,11 @@ define([
 
         self.core.traverse(self.rootNode, {excludeRoot: true}, function (visited, next) {
             // This is the visit function
+            //TODO check how to remove meta elements from the model
+            /*if(self.core.isMetaNode(visited)){
+                next(null);
+                return;
+            }*/
             var nodeParameters = {
                     id: self.core.getPath(visited),
                     base: self.core.getBase(visited) === null ? 'NULL' :
