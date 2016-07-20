@@ -2,6 +2,18 @@
 ## More information
 [Formula](http://formula.codeplex.com/)
 
+## Formula Machine on linux
+To run the .NET executable on linux requires [Mono](http://www.mono-project.com). Follow the instructions [described here](http://www.mono-project.com/docs/getting-started/install/linux/) and for ubuntu run:
+
+```
+sudo apt-get install mono-complete
+```
+
+Check it is available via:
+```
+mono --version
+```
+
 ## Installation:
 Here is the outline of the quickest and most compact deployment of the framework.
 
