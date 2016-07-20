@@ -254,7 +254,7 @@ __router.post('/4ml', function (req, res) {
     logger.debug('Incoming post');
     if (req && req.body && req.body.hookId === config.hookId) {
         // console.time('hook');
-        logger.debug('Correct post, body', res.body);
+        logger.debug('Correct post, body', req.body);
         storeCommitEvent(req.body)
             .then(function (newHookEntry) {
                 res.sendStatus(200);
@@ -314,7 +314,7 @@ __router.get('/4ml/:projectId/:commitHash', function (req, res) {
 
     hooks.read(id)
         .then(function (hookEntry) {
-            logger.debug('success for get', hookEntry);
+            logger.debug('success for get');
             res.send(hookEntry);
         })
         .catch(function (err) {
@@ -362,4 +362,5 @@ __httpServer.listen(config.port, function (err) {
     hookResults = require('./controls/HookResult')(mongoose);
 
     process.chdir(PATH.join(__dirname, '../../'));
+    logger.info('Server is up ...');
 });
