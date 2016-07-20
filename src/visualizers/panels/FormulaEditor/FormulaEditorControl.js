@@ -332,7 +332,7 @@ define(['js/Constants',
                 events: [
                     'COMMIT'
                 ],
-                url: componentConfig.baseUrl || 'http://localhost:9009/4ml',
+                url: componentConfig.baseUrl || 'http://127.0.0.1:9009/4ml',
                 description: 'Hook to external formula machine to allow automated checking.'
             })
             .end(function (err/*, result*/) {
