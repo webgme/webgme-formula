@@ -8,7 +8,7 @@ var env = process.env.NODE_ENV || 'default',
     configFilename = __dirname + '/config.' + env + '.js',
     config = require(configFilename);
 
-
+console.log('Using config from', configFilename);
 module.exports = config;
 
 
