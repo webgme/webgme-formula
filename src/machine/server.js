@@ -38,10 +38,12 @@ function executeHook(eventData) {
 
 function generate4ml(parameters) {
     var deferred = Q.defer();
+    logger.debug('generate4ml parameters', parameters);
 
     runPlugin.main(['_', '_', 'GenFORMULA', parameters.projectName,
             '-c', parameters.commitHash, '-o', parameters.owner, '-u', parameters.data.userId],
         function (err, result) {
+            logger.debug('generate4ml plugin done', result);
             if (err) {
                 deferred.reject(err);
                 return;
@@ -51,6 +53,8 @@ function generate4ml(parameters) {
                     project: result.messages[0].message,
                     constraints: result.messages[1].message
                 });
+            } else {
+                deferred.reject(new Error('Unexpected plugin result ' + JSON.stringify(result, null, 2)));
             }
         }
     );
@@ -63,12 +67,15 @@ function prepareFormula(id, formulaData) {
         directory = './' + id,
         error = null,
         allDone = function () {
+            logger.debug('prepareFormula done, error?', error);
             if (error) {
                 deferred.reject(error);
                 return;
             }
             deferred.resolve(directory);
         };
+
+    logger.debug('prepareFormula id, formulaData', id, formulaData);
 
     FS.mkdir(directory, function (err) {
         if (err) {
@@ -97,7 +104,7 @@ function prepareFormula(id, formulaData) {
 
 function cleanFormula(directory) {
     var deferred = Q.defer();
-
+    logger.debug('cleanFormula directory', directory);
     FS.readdir(directory, function (err, files) {
         var i;
 
@@ -110,6 +117,7 @@ function cleanFormula(directory) {
             FS.unlinkSync(PATH.join(directory, files[i]));
         }
         FS.rmdir(directory, function (err) {
+            logger.debug('cleanFormula done, err?', err);
             if (err) {
                 deferred.reject(err);
                 return;
@@ -124,7 +132,7 @@ function cleanFormula(directory) {
 
 function executeFormulaTasks(directory) {
     var deferred = Q.defer();
-
+    logger.debug('executeFormulaTasks directory', directory);
     //all the different Formula tasks can be executed independently
     Q.allSettled([
         executeConstraints(directory)
@@ -139,15 +147,18 @@ function executeFormulaTasks(directory) {
                 return;
             }
             output.constraints = results[0].value;
-
+            logger.debug('executeFormulaTasks done, output', output);
             deferred.resolve(output);
         });
+
     return deferred.promise;
 }
 
 function executeConstraints(directory) {
     var deferred = Q.defer(),
         result;
+
+    logger.debug('executeConstraints directory', directory);
     EXECUTE(config.environment + ' ' +
         config.commands.constraints + ' -f module.4ml -c constraints.json',
         {
@@ -174,6 +185,7 @@ function executeConstraints(directory) {
                     return;
                 }
 
+                logger.debug('executeConstraints done', result);
                 deferred.resolve(result);
             });
         }
@@ -204,12 +216,13 @@ function storeCommitEvent(eventData) {
 
 function storeHookResult(id, result) {
     var deferred = Q.defer();
-
+    logger.debug('storeHookResult id, result', id, result);
     hookResults.create(result)
         .then(function (resultId) {
             return hooks.update(id, {result: resultId});
         })
         .then(function (/*newHookEntry*/) {
+            logger.debug('storeHookResult done', id, result);
             deferred.resolve();
         })
         .catch(deferred.reject);
@@ -238,16 +251,17 @@ __router.use(bodyParser.json({limit: '900mb'}));
 
 // This route should be used to trigger hook handling
 __router.post('/4ml', function (req, res) {
+    logger.debug('Incoming post');
     if (req && req.body && req.body.hookId === config.hookId) {
         // console.time('hook');
+        logger.debug('Correct post, body', req.body);
         storeCommitEvent(req.body)
             .then(function (newHookEntry) {
                 res.sendStatus(200);
                 return executeHook(newHookEntry);
             })
             .then(function () {
-                //TODO do we need any postprocessing??
-                // console.timeEnd('hook');
+                logger.debug('Post succeeded!');
             })
             .catch(function (err) {
                 logger.error(err);
@@ -255,13 +269,18 @@ __router.post('/4ml', function (req, res) {
                 res.send(err);
             });
     } else {
-        logger.info('unknown POST event');
+        logger.warn('unknown POST event');
         res.sendStatus(400);
     }
 });
 
 // This is for re-execution of a specific hook
 __router.put('/4ml', function (req, res) {
+    //TODO: Implement me
+    res.status(404);
+    res.send(err);
+    return;
+
     if (req && req.body) {
         reExecuteHook(req.body)
             .then(function () {
@@ -291,9 +310,11 @@ __router.put('/4ml', function (req, res) {
 // This is to get specific data from a hook-result
 __router.get('/4ml/:projectId/:commitHash', function (req, res) {
     var id = getIdFromGetRequest(req.params.projectId, req.params.commitHash);
+    logger.debug('incoming get for id', id);
 
     hooks.read(id)
         .then(function (hookEntry) {
+            logger.debug('success for get');
             res.send(hookEntry);
         })
         .catch(function (err) {
@@ -340,6 +361,6 @@ __httpServer.listen(config.port, function (err) {
     hooks = require('./controls/Hook')(mongoose);
     hookResults = require('./controls/HookResult')(mongoose);
 
-    process.chdir('../../');
-
+    process.chdir(PATH.join(__dirname, '../../'));
+    logger.info('Server is up ...');
 });

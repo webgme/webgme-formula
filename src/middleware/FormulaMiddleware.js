@@ -51,11 +51,11 @@ function initialize(middlewareOpts) {
 
     // all endpoints require read access to the given project
     router.get('/:projectId/:commitHash', function (req, res) {
-        superagent.get('http://localhost:' + middlewareOpts.gmeConfig.server.port + '/api/componentSettings/FormulaEditor')
+        superagent.get('http://127.0.0.1:' + middlewareOpts.gmeConfig.server.port + '/api/componentSettings/FormulaEditor')
             .end(function (err, result) {
                 var config = result ? JSON.parse(result.text || '{}') : {};
 
-                config.baseUrl = config.baseUrl || 'http://localhost:9009/4ml';
+                config.baseUrl = config.baseUrl || 'http://127.0.0.1:9009/4ml';
                 checkAccess(authorizer, req.userData.userId, req.params.projectId)
                     .then(function () {
                         superagent.get(config.baseUrl + '/' + encodeURIComponent(req.params.projectId) + '/' +
