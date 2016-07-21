@@ -159,8 +159,44 @@ function executeConstraints(directory) {
         result;
 
     logger.debug('executeConstraints directory', directory);
-    EXECUTE(config.environment + ' ' +
-        config.commands.constraints + ' -f module.4ml -c constraints.json',
+    // EXECUTE(config.environment + ' ' +
+    //     config.commands.constraints + ' -f module.4ml -c constraints.json',
+    //     {
+    //         cwd: directory
+    //     },
+    //     function (err) {
+    //         if (err) {
+    //             deferred.reject(err);
+    //             return;
+    //         }
+    //         FS.readFile(PATH.join(directory, 'queryresults.json'), function (err, resultAsString) {
+    //             if (err) {
+    //                 deferred.reject(err);
+    //                 return;
+    //             }
+    //
+    //             try {
+    //                 result = JSON.parse(resultAsString);
+    //                 for (var i in result) {
+    //                     result[i] = result[i] === 'true';
+    //                 }
+    //             } catch (err) {
+    //                 deferred.reject(err);
+    //                 return;
+    //             }
+    //
+    //             logger.debug('executeConstraints done', result);
+    //             deferred.resolve(result);
+    //         });
+    //     }
+    // );
+    EFILE(config.environment, [
+            config.commands.constraints,
+            '-f',
+            'module.4ml',
+            '-c',
+            'constraints.json'
+        ],
         {
             cwd: directory
         },
@@ -236,6 +272,7 @@ var Express = require('express'),
     FS = require('fs'),
     PATH = require('path'),
     EXECUTE = require('child_process').exec,
+    EFILE = require('child_process').execFile,
     Logger = require('./logger'),
     config = require('./config'),
     runPlugin = require('webgme/src/bin/run_plugin'),
