@@ -312,7 +312,7 @@ define([
             case 'on':
                 this._hookStatusBtnIcon.addClass('glyphicon glyphicon-ok-circle');
                 this._hookStatusBtn.attr('title', 'Turn off automatic checking');
-                this._hookStatus = 'off';
+                this._hookStatus = 'on';
                 break;
             case 'error':
                 this._hookStatusBtnIcon.addClass('glyphicon glyphicon-remove-circle');

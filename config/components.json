@@ -1,5 +1,6 @@
 {
   "FormulaEditor": {
-    "baseUrl":"http://127.0.0.1:9009/4ml"
+    "baseUrl":"http://127.0.0.1:9009/4ml",
+    "maxRetry":10
   }
 }

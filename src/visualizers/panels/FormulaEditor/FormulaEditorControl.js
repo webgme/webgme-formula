@@ -221,6 +221,8 @@ define(['js/Constants',
             commitHash = self._client.getActiveCommitHash(),
             projectId = self._client.getActiveProjectId(),
             interval,
+            retryCounter = 0,
+            maxRetry = componentConfig.maxRetry || 10,
             waiting = false;
 
         self._result.state = 'collecting';
@@ -233,6 +235,7 @@ define(['js/Constants',
                 waiting = true;
                 superagent.get('4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
                     .end(function (err, result) {
+                        retryCounter += 1;
                         waiting = false;
                         // First, we check if our version is still the one to show
                         if (commitHash !== self._result.commitHash || projectId !== self._result.projectId) {
@@ -259,6 +262,10 @@ define(['js/Constants',
                                 clearInterval(interval);
                                 self._widget.setResults(result.constraints);
                             }
+                        }
+
+                        if (retryCounter >= maxRetry) {
+                            clearInterval(interval);
                         }
                     });
             }
