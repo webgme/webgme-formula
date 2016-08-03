@@ -54,6 +54,13 @@
     color: #008000;
 }
 
+.formula-editor .tab {
+    font-size: 10px;
+    top:5px;
+}
+.formula-editor .tab-group {
+    border-bottom: none;
+}
 .formula-editor .hook-btn {
     position: absolute;
     right: 10px;

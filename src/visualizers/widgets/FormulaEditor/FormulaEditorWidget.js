@@ -52,8 +52,24 @@ define([
 
         this._el.append(FormulaEditorHtml);
 
-        this._saveConstraintsBtn = this._el.find('#constraintBtn').first();
+        this._codeArea = this._el.find('#codeArea').first();
+        this._resultArea = this._el.find('#resultArea').first();
 
+        this._queryTab = this._el.find('#queryTab').first();
+        this._queryTab.on('click', function () {
+            self._constraintTab.removeClass('active');
+            self._queryTab.addClass('active');
+            self._resizeWidgetWidth(true, self._el.width());
+        });
+        this._constraintTab = this._el.find('#constraintTab').first();
+        this._constraintTab.on('click', function () {
+            self._constraintTab.addClass('active');
+            self._queryTab.removeClass('active');
+            self._resizeWidgetWidth(false, self._el.width());
+        });
+        this._constraintTab.addClass('active');
+
+        this._saveConstraintsBtn = this._el.find('#constraintBtn').first();
         this._saveConstraintsBtn.on('click', function (/*event*/) {
             self._previousCodeState = self._codemirror.getValue();
             self.onSaveConstraints(self._previousCodeState);
@@ -93,12 +109,14 @@ define([
         this._domainBtn.on('click', function (/*event*/) {
             if (self._domainVisible) {
                 self._domainVisible = false;
+                self._domainBtn.removeClass('active');
                 $(self._domainmirror.getWrapperElement()).hide();
             } else {
                 self._domainVisible = true;
+                self._domainBtn.addClass('active');
                 $(self._domainmirror.getWrapperElement()).show();
             }
-            self._resizeWidget(self._domainVisible, self._el.height());
+            self._resizeWidgetHeight(self._domainVisible, self._el.height());
         });
         $(self._domainmirror.getWrapperElement()).hide(); //by default we hide it
 
@@ -201,10 +219,10 @@ define([
 
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
         this._logger.debug('Widget is resizing...');
-        this._resizeWidget(this._domainVisible, height);
+        this._resizeWidgetHeight(this._domainVisible, height);
     };
 
-    FormulaEditorWidget.prototype._resizeWidget = function (isSplit, height) {
+    FormulaEditorWidget.prototype._resizeWidgetHeight = function (isSplit, height) {
         if (isSplit) {
             $(this._el).find('.CodeMirror').css({
                 height: height - 25 > 200 ? (height - 25) / 2 : 100
@@ -222,6 +240,37 @@ define([
         }
     };
 
+    FormulaEditorWidget.prototype._resizeWidgetWidth = function (isSplit, width) {
+        if (isSplit) {
+            this._codeArea.css({
+                width: width > 300 ? width - 200 : 100
+            });
+            $(this._el).find('.CodeMirror').css({
+                width: width > 300 ? width - 200 : 100
+            });
+            this._resultArea.css({
+                width: 200
+            });
+            this._domainmirror.focus();
+            this._domainmirror.refresh();
+            this._codemirror.focus();
+            this._codemirror.refresh();
+        } else {
+            this._codeArea.css({
+                width: width
+            });
+            $(this._el).find('.CodeMirror').css({
+                width: width
+            });
+            this._resultArea.css({
+                width: 0
+            });
+            this._domainmirror.focus();
+            this._domainmirror.refresh();
+            this._codemirror.focus();
+            this._codemirror.refresh();
+        }
+    };
     // Auto-save functions
 
     FormulaEditorWidget.prototype._autoSave = function () {

@@ -1,5 +1,15 @@
 <div id="FORMULA_EDITOR_DIV" style="position:absolute; background-color: white; width: 100%; height: 100%">
     <div class="btn-group col-sm-12">
+        <div class="toolbar-button">
+            <ul class="nav nav-tabs tab-group">
+                <li role="presentation" id="constraintTab">
+                    <a class="btn btn-mini tab">Constraints</a>
+                </li>
+                <li role="presentation" id="queryTab">
+                    <a class="btn btn-mini tab">Queries</a>
+                </li>
+            </ul>
+        </div>
         <div class="toolbar-button" title="save user defined constraints">
             <a id="constraintBtn" class="btn btn-mini">
                 <i class="glyphicon glyphicon-floppy-disk"></i>
@@ -35,6 +45,10 @@
             </a>
         </div>
     </div>
+    <div id="codeArea">
     <textarea id="domainarea"></textarea>
     <textarea id="codearea"></textarea>
+    </div>
+    <div id="resultArea">
+    </div>
 </div>
