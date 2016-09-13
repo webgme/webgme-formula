@@ -25,7 +25,12 @@
                 <i class="glyphicon glyphicon-dashboard"></i>
             </a>
         </div>-->
-        <div class="toolbar-button" title="constraint result list">
+        <div class="toolbar-button" title="show or hide results">
+            <a id="resultBtn" class="btn btn-mini">
+                <i class="glyphicon glyphicon-list-alt"></i>
+            </a>
+        </div>
+        <!--<div class="toolbar-button" title="constraint result list">
             <a class="btn btn-mini dropdown-toggle" data-toggle="dropdown" aria-haspopup="true"
                aria-expanded="false">
                 <i class="glyphicon glyphicon-list-alt"></i>
@@ -33,7 +38,7 @@
             </a>
             <ul id="constraintlist" class="dropdown-menu">
             </ul>
-        </div>
+        </div>-->
         <div class="toolbar-button">
             <a class="btn btn-mini all-ok" id="allResultOk">
                 <i class="glyphicon glyphicon-ok"></i>
@@ -49,6 +54,8 @@
     <textarea id="domainarea"></textarea>
     <textarea id="codearea"></textarea>
     </div>
-    <div id="resultArea">
+    <div id="resultArea" class="result-area">
+        <ul id="constraintlist">
+        </ul>
     </div>
 </div>

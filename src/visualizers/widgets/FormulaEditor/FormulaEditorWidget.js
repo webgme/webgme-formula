@@ -59,13 +59,13 @@ define([
         this._queryTab.on('click', function () {
             self._constraintTab.removeClass('active');
             self._queryTab.addClass('active');
-            self._resizeWidgetWidth(true, self._el.width());
+            // self._resizeWidgetWidth(true, self._el.width());
         });
         this._constraintTab = this._el.find('#constraintTab').first();
         this._constraintTab.on('click', function () {
             self._constraintTab.addClass('active');
             self._queryTab.removeClass('active');
-            self._resizeWidgetWidth(false, self._el.width());
+            // self._resizeWidgetWidth(false, self._el.width());
         });
         this._constraintTab.addClass('active');
 
@@ -118,6 +118,24 @@ define([
             }
             self._resizeWidgetHeight(self._domainVisible, self._el.height());
         });
+
+        this._resultBtn = this._el.find('#resultBtn').first();
+        this._resultVisible = false;
+        this._resultArea.hide();
+        this._resultBtn.on('click', function (/*event*/) {
+            if (self._resultVisible) {
+                self._resultVisible = false;
+                self._resultArea.hide();
+                self._resultBtn.removeClass('active');
+                self._resizeWidgetWidth(false, self._el.width());
+            } else {
+                self._resultVisible = true;
+                self._resultArea.show();
+                self._resultBtn.addClass('active');
+                self._resizeWidgetWidth(true, self._el.width());
+            }
+        });
+
         $(self._domainmirror.getWrapperElement()).hide(); //by default we hide it
 
         this._codeMirrorEl = this._el.find('#codearea').first();
@@ -249,7 +267,8 @@ define([
                 width: width > 300 ? width - 200 : 100
             });
             this._resultArea.css({
-                width: 200
+                width: 200,
+                left: width > 300 ? width - 200 : 100
             });
             this._domainmirror.focus();
             this._domainmirror.refresh();
@@ -263,7 +282,8 @@ define([
                 width: width
             });
             this._resultArea.css({
-                width: 0
+                width: 0,
+                left: 0
             });
             this._domainmirror.focus();
             this._domainmirror.refresh();
