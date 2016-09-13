@@ -12,7 +12,7 @@ module.exports = {
             transportType: 'File',
             options: {
                 name: 'info-file',
-                filename: '../../server.log',
+                filename: '../../machine.log',
                 level: 'info',
                 json: false
             }
@@ -20,7 +20,7 @@ module.exports = {
             transportType: 'File',
             options: {
                 name: 'error-file',
-                filename: '../../server-error.log',
+                filename: '../../machine-error.log',
                 level: 'error',
                 handleExceptions: true, // ignored by default when you create the logger, see the logger.create function
                 json: false

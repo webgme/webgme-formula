@@ -195,11 +195,11 @@ function executeConstraints(directory) {
 }
 
 function getIdFromHook(hook) {
-    return hook.owner + '_' + hook.projectName + '_' + hook.commitHash.substr(1);
+    return /*hook.owner + '_' + hook.projectName + '_' + */hook.commitHash.substr(1);
 }
 
 function getIdFromGetRequest(projectId, commitHash) {
-    return projectId.replace("+", "_") + '_' + commitHash.substr(1);
+    return /*projectId.replace("+", "_") + '_' + */commitHash.substr(1);
 }
 
 function storeCommitEvent(eventData) {
