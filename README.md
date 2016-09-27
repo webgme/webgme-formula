@@ -22,6 +22,15 @@ Here is the outline of the quickest and most compact deployment of the framework
 - Start Formula Machine ```npm run start_machine```
 - Start WebGME server  ```npm run start```
 
+## Extend your own deployment
+If you already have your own deployment built with [webgme-cli](https://github.com/webgme/webgme-cli) you can follow these steps to add the FormulaEditor to your work.
+
+- Import visualizer ```webgme import viz FormulaEditor webgme/formula```
+- Import plugin ```webgme import plugin GenFORMULA webgme/formula```
+- Create own configuration files (if necessary)
+- Start Formula Machine ```npm run start_machine```
+- Start WebGME server  ```npm start```
+
 ## Configuration:
 The main configuration is the WebGME server [configuration](https://github.com/webgme/webgme/tree/master/config).
 You can also configure some parameters of the Formula machine in a similar manner.
