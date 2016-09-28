@@ -12,8 +12,6 @@ config.mongo.uri = 'mongodb://127.0.0.1:27017/formula';
 
 config.plugin.allowServerExecution = true;
 
-config.rest.components['4ml'] = '../../../../src/middleware/FormulaMiddleware.js';
-
 config.webhooks.enable = true;
 
 // We do not want to spam the console with bin script logs.

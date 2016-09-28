@@ -12,15 +12,15 @@ module.exports = {
             transportType: 'File',
             options: {
                 name: 'info-file',
-                filename: '../../machine.log',
-                level: 'info',
+                filename: 'machine.log',
+                level: 'debug',
                 json: false
             }
         }, {
             transportType: 'File',
             options: {
                 name: 'error-file',
-                filename: '../../machine-error.log',
+                filename: 'machine-error.log',
                 level: 'error',
                 handleExceptions: true, // ignored by default when you create the logger, see the logger.create function
                 json: false

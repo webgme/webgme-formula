@@ -27,8 +27,9 @@ If you already have your own deployment built with [webgme-cli](https://github.c
 
 - Import visualizer ```webgme import viz FormulaEditor webgme/formula```
 - Import plugin ```webgme import plugin GenFORMULA webgme/formula```
+- Import router ```webgme import router 4ml webgme/formula```
 - Create own configuration files (if necessary)
-- Start Formula Machine ```npm run start_machine```
+- Start Formula Machine (go into directory ```node_modules/formula```) ```node src/machine/server.js```
 - Start WebGME server  ```npm start```
 
 ## Configuration:
