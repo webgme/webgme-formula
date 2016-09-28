@@ -34,7 +34,7 @@
     "routers": {
       "4ml": {
         "src": "src/routers/4ml",
-        "mount": "routers/4ml"
+        "mount": "4ml"
       }
     }
   },
