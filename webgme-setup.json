@@ -30,6 +30,12 @@
         "secondary": false,
         "widget": "src/visualizers/widgets/FormulaEditor"
       }
+    },
+    "routers": {
+      "4ml": {
+        "src": "src/routers/4ml",
+        "mount": "routers/4ml"
+      }
     }
   },
   "dependencies": {
@@ -38,6 +44,7 @@
     "decorators": {},
     "layouts": {},
     "seeds": {},
-    "visualizers": {}
+    "visualizers": {},
+    "routers": {}
   }
 }

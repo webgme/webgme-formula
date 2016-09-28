@@ -31,8 +31,8 @@ function checkAccess(authorizer, userId, projectId) {
 }
 
 function initialize(middlewareOpts) {
-    var logger = middlewareOpts.logger.fork('FormulaMiddleware'),
-    //gmeConfig = middlewareOpts.gmeConfig,
+    var logger = middlewareOpts.logger.fork('4ml-router'),
+        //gmeConfig = middlewareOpts.gmeConfig,
         ensureAuthenticated = middlewareOpts.ensureAuthenticated,
         getUserId = middlewareOpts.getUserId,
         authorizer = middlewareOpts.gmeAuth.authorizer;

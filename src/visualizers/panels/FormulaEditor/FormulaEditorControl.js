@@ -231,7 +231,7 @@ define(['js/Constants',
         interval = setInterval(function () {
             if (!waiting) {
                 waiting = true;
-                superagent.get('4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
+                superagent.get('routers/4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
                     .end(function (err, result) {
                         waiting = false;
                         // First, we check if our version is still the one to show
