@@ -58,3 +58,8 @@
     position: absolute;
     right: 10px;
 }
+
+.formula-editor .network-status-btn {
+    position: absolute;
+    right: 30px;
+}

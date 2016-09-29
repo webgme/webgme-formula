@@ -257,7 +257,8 @@ define(['js/Constants',
                                 // TODO we should state that the result is under computation
                             } else {
                                 clearInterval(interval);
-                                self._widget.setResults(result.constraints);
+                                self._widget.setResults(result.constraints || []);
+                                self._widget.setConstraintSyntaxErrors(result.error || "");
                             }
                         }
                     });

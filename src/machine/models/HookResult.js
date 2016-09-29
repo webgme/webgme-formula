@@ -8,7 +8,7 @@ var Schema = require('mongoose').Schema,
     HookResultSchema = new Schema({
         created: {type: Date, required: true},
         constraints: Schema.Types.Mixed,
-        queries: Schema.Types.Mixed
+        error: String
     });
 
 module.exports = HookResultSchema;

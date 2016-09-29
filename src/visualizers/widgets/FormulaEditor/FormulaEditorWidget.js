@@ -15,7 +15,8 @@ define([
     'use strict';
 
     var FormulaEditorWidget,
-        WIDGET_CLASS = 'formula-editor';
+        WIDGET_CLASS = 'formula-editor',
+        CODE_SYNTAX_GUTTER = 'constraint-syntax';
 
     function getConstraintResultElem(name, result) {
         if (result === true) {
@@ -89,6 +90,7 @@ define([
             },
             dragDrop: false
         });
+
         this._domainVisible = false;
         this._domainBtn.on('click', function (/*event*/) {
             if (self._domainVisible) {
@@ -112,10 +114,15 @@ define([
                 name: 'formula',
                 globalVars: true
             },
-            dragDrop: false
+            dragDrop: false,
+            gutters: [CODE_SYNTAX_GUTTER, "CodeMirror-linenumbers"]
         });
 
         this._codemirror.on('change', function () {
+            //clear syntax error signs from gutter
+            self._codemirror.clearGutter(CODE_SYNTAX_GUTTER);
+            self._codemirror.focus();
+            self._codemirror.refresh();
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
             if (self._previousCodeState === self._codemirror.getValue()) {
@@ -236,6 +243,7 @@ define([
     FormulaEditorWidget.prototype._startAutoSave = function () {
         // no need for start as we only autosave if user stops editing for autosave-time
     };
+
     FormulaEditorWidget.prototype._stopAutoSave = function () {
         if (this._autoSaveTimer) {
             clearTimeout(this._autoSaveTimer);
@@ -320,6 +328,27 @@ define([
                 this._hookStatus = 'error';
 
         }
+    };
+
+    FormulaEditorWidget.prototype.setConstraintSyntaxErrors = function (errorTxt) {
+        var lines, i, lineNumber, marker, numOfLines = this._codemirror.lineCount();
+
+        lines = errorTxt.split('\n');
+
+        lines.push('fuck');
+
+        for (i = 0; i < lines.length; i += 1) {
+            lineNumber = Number(lines[i].substring(1, lines[i].indexOf(',')));
+            if (lineNumber > 0 && lineNumber <= numOfLines) {
+                marker = document.createElement("i");
+                marker.className = "glyphicon glyphicon-exclamation-sign";
+                marker.style.color = "#822";
+                marker.title = lines[i];
+                this._codemirror.setGutterMarker(lineNumber - 1, CODE_SYNTAX_GUTTER, marker);
+            }
+        }
+        this._codemirror.focus();
+        this._codemirror.refresh();
     };
     /* * * * * * * * Visualizer event handlers * * * * * * * */
 
