@@ -113,9 +113,11 @@ define([
         this._domainBtn.on('click', function (/*event*/) {
             if (self._domainVisible) {
                 self._domainVisible = false;
+                self._domainBtn.removeClass('active');
                 $(self._domainmirror.getWrapperElement()).hide();
             } else {
                 self._domainVisible = true;
+                self._domainBtn.addClass('active');
                 $(self._domainmirror.getWrapperElement()).show();
             }
             self._resizeWidget(self._domainVisible, self._el.height());
@@ -344,7 +346,7 @@ define([
             case 'on':
                 this._hookStatusBtnIcon.addClass('glyphicon glyphicon-ok-circle');
                 this._hookStatusBtn.attr('title', 'Turn off automatic checking');
-                this._hookStatus = 'off';
+                this._hookStatus = 'on';
                 break;
             case 'error':
                 this._hookStatusBtnIcon.addClass('glyphicon glyphicon-remove-circle');
@@ -352,6 +354,10 @@ define([
                 this._hookStatus = 'error';
 
         }
+    };
+
+    FormulaEditorWidget.prototype.getHookStatus = function () {
+        return this._hookStatus;
     };
 
     FormulaEditorWidget.prototype.setConstraintSyntaxErrors = function (errorTxt) {
@@ -375,18 +381,26 @@ define([
         this._codemirror.refresh();
     };
 
-    FormulaEditorWidget.prototype.setNetworkStatus = function (error) {
+    FormulaEditorWidget.prototype.setNetworkStatus = function (status, info) {
         this._networkStatusBtnIcon.removeClass('glyphicon-hourglass');
         this._networkStatusBtnIcon.removeClass('glyphicon-warning-sign');
+        this._networkStatusBtnIcon.removeClass('glyphicon-thumbs-down');
         $(this._networkStatusBtn).show();
-        switch (error) {
+        switch (status) {
             case 'error':
+                $(this._networkStatusBtnIcon).css({color: 'red'});
                 this._networkStatusBtnIcon.addClass('glyphicon-warning-sign');
                 this._networkStatusBtn.attr('title', 'Error in communication with the formula-machine!');
                 break;
             case 'wait':
+                $(this._networkStatusBtnIcon).css({color: 'black'});
                 this._networkStatusBtnIcon.addClass('glyphicon-hourglass');
                 this._networkStatusBtn.attr('title', 'Result from the formula-machine are being gathered...');
+                break;
+            case 'check-failure':
+                $(this._networkStatusBtnIcon).css({color: 'red'});
+                this._networkStatusBtnIcon.addClass('glyphicon-thumbs-down');
+                this._networkStatusBtn.attr('title', 'Failure during check: ' + info);
                 break;
             default:
                 $(this._networkStatusBtn).hide();

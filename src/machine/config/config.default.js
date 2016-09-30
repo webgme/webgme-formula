@@ -14,7 +14,7 @@ module.exports = {
             options: {
                 name: 'info-file',
                 filename: 'machine.log',
-                level: 'debug',
+                level: 'info',
                 json: false
             }
         }, {

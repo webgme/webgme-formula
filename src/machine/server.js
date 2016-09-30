@@ -4,36 +4,87 @@
 
 function executeHook(eventData) {
     var deferred = Q.defer(),
+        state = 0,
         directory,
         formulaData,
         result;
 
-    // console.time('plugin');
+    logger.debug('executeHook - ', eventData.id);
     generate4ml(eventData)
         .then(function (formulaData_) {
-            // console.timeEnd('plugin');
-            // console.time('pre');
+            logger.debug('4ml generated - ', eventData.id);
             formulaData = formulaData_;
+            state = 1;
             return prepareFormula(eventData.id, formulaData);
         })
         .then(function (directory_) {
+            logger.debug('directory prepared - ', eventData.id);
             directory = directory_;
-            // console.timeEnd('pre');
-            // console.time('4ml');
+            state = 2;
             return executeFormulaTasks(directory, formulaData);
         })
         .then(function (result_) {
+            logger.debug('tasks executed - ', eventData.id);
             result = result_;
-            // console.timeEnd('4ml');
-            // console.time('post');
+            state = 3;
+
             return cleanFormula(directory);
         })
         .then(function () {
-            // console.timeEnd('post');
+            logger.debug('directory cleaned - ', eventData.id);
+            state = 4;
             return storeHookResult(eventData.id, result);
         })
         .then(deferred.resolve)
-        .catch(deferred.reject);
+        .catch(function (err) {
+            logger.debug('executeHook failure - ', eventData.id, ' - ', state);
+            switch (state) {
+                case 0:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to generate 4ml: ' + err
+                    };
+                    break;
+                case 1:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to prepare work directory: ' + err
+                    };
+                    break;
+                case 2:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure execute tasks: ' + err
+                    };
+                    break;
+                case 3:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure cleaning work directory: ' + err
+                    };
+                    break;
+                default:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to update status: ' + err
+                    };
+            }
+            storeHookResult(eventData.id, result)
+                .then(function () {
+                    logger.error('ExecuteHookFailure:', eventData.id, JSON.stringify(result));
+                    if (state === 2) {
+                        return cleanFormula(directory);
+                    }
+                    return;
+                })
+                .then(deferred.resolve)
+                .catch(deferred.reject);
+        });
 
     return deferred.promise;
 }
@@ -141,15 +192,15 @@ function executeFormulaTasks(directory, formulaData) {
         executeConstraints(directory, formulaData)
     ])
         .then(function (results) {
-            var output = {};
+            var output = {error: '', syntaxError: ''};
 
             // Constraint results
             if (results[0].state === 'rejected') {
                 logger.error('cannot get constraint results:', results[0].reason);
-                deferred.reject(new Error('failed to check constraints'));
+                deferred.reject(new Error('failed to check constraints: ' + results[0].reason));
                 return;
             } else if (results[0].value instanceof Error) {
-                output.error = results[0].value.message;
+                output.syntaxError = results[0].value.message;
                 logger.debug('executeFormulaTasks done but has failed syntax,', output);
             } else {
                 output.constraints = results[0].value;
@@ -358,7 +409,7 @@ __router.put('/4ml', function (req, res) {
             })
             .catch(function (err) {
                 res.status(500);
-            })
+            });
         storeCommitEvent(req.body)
             .then(function () {
                 res.sendStatus(200);
@@ -401,15 +452,14 @@ __router.get('/4ml/:projectId/:commitHash', function (req, res) {
 __httpServer = require('http').createServer(__router);
 
 __httpServer.on('connection', function (socket) {
-    logger.info('new connection', socket.id);
 });
 
-__httpServer.on('clientError', function (err, socket) {
-    logger.error('clientError [' + socket.id + ']', err);
+__httpServer.on('clientError', function (err/*, socket*/) {
+    logger.error('clientError: ', err);
 });
 
 __httpServer.on('error', function (err) {
-    logger.error('serverError', err);
+    logger.error('serverError: ', err);
 });
 
 __httpServer.listen(config.port, function (err) {

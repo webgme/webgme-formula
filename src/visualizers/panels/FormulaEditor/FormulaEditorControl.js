@@ -33,7 +33,6 @@ define(['js/Constants',
         this._widget = options.widget;
 
         this._currentNodeId = null;
-        this._currentNodeParentId = undefined;
 
         this._initWidgetEventHandlers();
 
@@ -135,45 +134,6 @@ define(['js/Constants',
                 self._widget.setHookStatus('off');
             }
         });
-
-        // var desc = this._getObjectDescriptor(nodeId),
-        //     self = this;
-        //
-        // self._logger.debug('activeObject nodeId \'' + nodeId + '\'');
-        //
-        // // Remove current territory patterns
-        // if (self._currentNodeId) {
-        //     self._client.removeUI(self._territoryId);
-        // }
-        //
-        // self._currentNodeId = nodeId;
-        // self._currentNodeParentId = undefined;
-        //
-        // if (typeof self._currentNodeId === 'string') {
-        //     // Put new node's info into territory rules
-        //     self._selfPatterns = {};
-        //     self._selfPatterns[nodeId] = {children: 0};  // Territory "rule"
-        //
-        //     self._widget.setTitle(desc.name.toUpperCase());
-        //
-        //     if (typeof desc.parentId === 'string') {
-        //         self.$btnModelHierarchyUp.show();
-        //     } else {
-        //         self.$btnModelHierarchyUp.hide();
-        //     }
-        //
-        //     self._currentNodeParentId = desc.parentId;
-        //
-        //     self._territoryId = self._client.addUI(self, function (events) {
-        //         self._eventCallback(events);
-        //     });
-        //
-        //     // Update the territory
-        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
-        //
-        //     self._selfPatterns[nodeId] = {children: 1};
-        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
-        // }
     };
 
     FormulaEditorControl.prototype._refreshConstraints = function () {
@@ -186,35 +146,6 @@ define(['js/Constants',
             this._widget.setConstraints('');
         }
     };
-
-    // FormulaEditorControl.prototype._getSimpleResults = function () {
-    //     // this._widget.setResults('checking');
-    //     // now we check if we have results
-    //     var self = this,
-    //         project = self._client.getProjectObject(),
-    //         rootNode = self._client.getNode(CONSTANTS.PROJECT_ROOT_ID),
-    //         formulaInfo;
-    //
-    //     this._widget.setResults({}); //initializing results
-    //
-    //     if (rootNode) {
-    //         formulaInfo = rootNode.getAttribute('_formulaInfo');
-    //         if (formulaInfo && typeof formulaInfo.originCommitHash === 'string' &&
-    //             Object.keys(formulaInfo.simpleCheckResults || {}).length !== 0) {
-    //             // we have results and a possible origin commit hash so let's check it out
-    //             project.loadObject(self._client.getActiveCommitHash(), function (err, commitObj) {
-    //                 if (err) {
-    //                     self._logger.error(err);
-    //                 } else {
-    //                     if (commitObj.parents && commitObj.parents.indexOf(formulaInfo.originCommitHash) > -1 &&
-    //                         commitObj.parents.length === 1) {
-    //                         self._widget.setResults(formulaInfo.simpleCheckResults);
-    //                     }
-    //                 }
-    //             });
-    //         }
-    //     }
-    // };
 
     FormulaEditorControl.prototype._getSimpleResults = function () {
         var self = this,
@@ -248,8 +179,6 @@ define(['js/Constants',
 
                         // Then, we check how to handle the result
                         if (err) {
-                            // TODO we should state the error/retry
-                            // console.log(err.message.indexOf('Internal Server Error') !== -1);
                             if (err.message.indexOf('Internal Server Error') !== -1 ||
                                 err.message.indexOf('Forbidden') !== -1 ||
                                 numberOfTries === maxTries) {
@@ -261,14 +190,18 @@ define(['js/Constants',
                             result = JSON.parse(result.text).result;
                             if (result) {
                                 clearInterval(interval);
-                                self._widget.setNetworkStatus(null);
                                 self._widget.setResults(result.constraints || []);
-                                self._widget.setConstraintSyntaxErrors(result.error || "");
+                                self._widget.setConstraintSyntaxErrors(result.syntaxError || "");
+                                if (result.error) {
+                                    self._widget.setNetworkStatus('check-failure', result.error);
+                                } else {
+                                    self._widget.setNetworkStatus(null);
+                                }
                             }
                         }
                     });
             }
-        }, 100);
+        }, 500);
     };
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaEditorControl.prototype._eventCallback = function (events) {
@@ -297,14 +230,23 @@ define(['js/Constants',
         this._logger.debug('_eventCallback \'' + events.length + '\' items - DONE');
     };
 
-    FormulaEditorControl.prototype._onLoad = function (gmeId) {
+    FormulaEditorControl.prototype._refresh = function () {
         this._refreshConstraints();
-        this._getSimpleResults();
+
+        if (this._widget.getHookStatus() === 'on') {
+            this._getSimpleResults();
+        } else {
+            this._widget.setResults({});
+            this._widget.setNetworkStatus(null);
+        }
+    };
+
+    FormulaEditorControl.prototype._onLoad = function (gmeId) {
+        this._refresh();
     };
 
     FormulaEditorControl.prototype._onUpdate = function (gmeId) {
-        this._refreshConstraints();
-        this._getSimpleResults();
+        this._refresh();
     };
 
     FormulaEditorControl.prototype._onUnload = function (gmeId) {
