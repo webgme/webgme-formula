@@ -53,9 +53,29 @@ define([
         return userConstraints.match(/\w+(?= *:-[\s\S]*\.)/g) || [];
     }
 
+    function getCompleteFormulaTranslation(client, callback) {
+        var startingCommit = client.getActiveCommitHash(),
+            pluginContext = client.getCurrentPluginContext('GenFORMULA', '');
+
+        client.runServerPlugin('GenFORMULA', pluginContext, function (err, pluginResult) {
+            if (startingCommit === client.getActiveCommitHash()) {
+                if (!err) {
+                    if (pluginResult.success === true && pluginResult.messages.length > 1) {
+                        pluginResult = pluginResult.messages[0].message;
+                    } else {
+                        err = new Error("Invalid result format received!");
+                    }
+                }
+
+                callback(err, pluginResult);
+            }
+        });
+    }
+
     return {
         getLanguageAsString: getLanguageAsString,
         convertIdString: convertIdString,
-        getUserConstraintNames: getUserConstraintNames
+        getUserConstraintNames: getUserConstraintNames,
+        getCompleteFormulaTranslation: getCompleteFormulaTranslation
     }
 });

@@ -221,22 +221,28 @@ define(['js/Constants',
             commitHash = self._client.getActiveCommitHash(),
             projectId = self._client.getActiveProjectId(),
             interval,
-            waiting = false;
+            waiting = false,
+            numberOfTries = 0,
+            maxTries = 100;
 
         self._result.state = 'collecting';
         self._result.projectId = projectId;
         self._result.commitHash = commitHash;
 
-        self._widget.setResults({}); // TODO we should state that we are loading the results
+        self._widget.setResults({});
+        self._widget.setNetworkStatus(null);
         interval = setInterval(function () {
             if (!waiting) {
                 waiting = true;
+                self._widget.setNetworkStatus('wait');
                 superagent.get('4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
                     .end(function (err, result) {
                         waiting = false;
+                        numberOfTries += 1;
                         // First, we check if our version is still the one to show
                         if (commitHash !== self._result.commitHash || projectId !== self._result.projectId) {
                             clearInterval(interval);
+                            self._widget.setNetworkStatus(null);
                             return;
                         }
 
@@ -244,26 +250,25 @@ define(['js/Constants',
                         if (err) {
                             // TODO we should state the error/retry
                             // console.log(err.message.indexOf('Internal Server Error') !== -1);
-
                             if (err.message.indexOf('Internal Server Error') !== -1 ||
-                                err.message.indexOf('Forbidden') !== -1) {
+                                err.message.indexOf('Forbidden') !== -1 ||
+                                numberOfTries === maxTries) {
                                 //there will be no better result
                                 clearInterval(interval);
+                                self._widget.setNetworkStatus('error');
                             }
                         } else {
                             result = JSON.parse(result.text).result;
-
-                            if (result === null) {
-                                // TODO we should state that the result is under computation
-                            } else {
+                            if (result) {
                                 clearInterval(interval);
+                                self._widget.setNetworkStatus(null);
                                 self._widget.setResults(result.constraints || []);
                                 self._widget.setConstraintSyntaxErrors(result.error || "");
                             }
                         }
                     });
             }
-        }, 1000);
+        }, 100);
     };
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaEditorControl.prototype._eventCallback = function (events) {

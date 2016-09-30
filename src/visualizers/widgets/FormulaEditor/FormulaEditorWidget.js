@@ -28,10 +28,11 @@ define([
         }
     }
 
-    FormulaEditorWidget = function (logger, container) {
+    FormulaEditorWidget = function (logger, container, client) {
         this._logger = logger.fork('Widget');
 
         this._el = container;
+        this._client = client;
         this._codeMirrorEl = null;
         this._listEl = null;
         this._initialize();
@@ -76,6 +77,10 @@ define([
             }
         });
 
+        this._networkStatusBtn = this._el.find('#networkStatusBtn').first();
+        this._networkStatusBtnIcon = this._networkStatusBtn.children().first();
+        this.setNetworkStatus(null);
+
         // adding domain and its own codemirror
         this._domainBtn = this._el.find('#domainBtn').first();
         this._domainMirrorEl = this._el.find('#domainarea').first();
@@ -91,6 +96,19 @@ define([
             dragDrop: false
         });
 
+        this._translateModelBtn = document.createElement('button');
+        this._translateModelBtn.innerHTML = 'get model';
+        this._translateModelBtn.className = 'btn btn-xs btn-primary floating-translate-btn';
+        this._translateModelBtn.onclick = function (event) {
+            $(self._translateModelBtn).hide();
+            utils.getCompleteFormulaTranslation(self._client, function (err, result) {
+                if (!err) {
+                    self.setDomain(result, true);
+                }
+            });
+        };
+
+        $(this._domainmirror.getWrapperElement()).prepend(this._translateModelBtn);
         this._domainVisible = false;
         this._domainBtn.on('click', function (/*event*/) {
             if (self._domainVisible) {
@@ -255,11 +273,17 @@ define([
         return this._codemirror.getValue();
     };
 
-    FormulaEditorWidget.prototype.setDomain = function (text) {
+    FormulaEditorWidget.prototype.setDomain = function (text, full) {
         var cursor = this._domainmirror.getCursor();
         this._domainmirror.setValue(text);
         this._domainmirror.refresh();
         this._domainmirror.setCursor(cursor);
+
+        if (full) {
+            $(this._translateModelBtn).hide();
+        } else {
+            $(this._translateModelBtn).show();
+        }
     };
 
     FormulaEditorWidget.prototype.setConstraints = function (text) {
@@ -349,6 +373,24 @@ define([
         }
         this._codemirror.focus();
         this._codemirror.refresh();
+    };
+
+    FormulaEditorWidget.prototype.setNetworkStatus = function (error) {
+        this._networkStatusBtnIcon.removeClass('glyphicon-hourglass');
+        this._networkStatusBtnIcon.removeClass('glyphicon-warning-sign');
+        $(this._networkStatusBtn).show();
+        switch (error) {
+            case 'error':
+                this._networkStatusBtnIcon.addClass('glyphicon-warning-sign');
+                this._networkStatusBtn.attr('title', 'Error in communication with the formula-machine!');
+                break;
+            case 'wait':
+                this._networkStatusBtnIcon.addClass('glyphicon-hourglass');
+                this._networkStatusBtn.attr('title', 'Result from the formula-machine are being gathered...');
+                break;
+            default:
+                $(this._networkStatusBtn).hide();
+        }
     };
     /* * * * * * * * Visualizer event handlers * * * * * * * */
 
