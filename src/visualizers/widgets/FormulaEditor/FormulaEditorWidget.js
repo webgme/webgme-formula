@@ -18,14 +18,55 @@ define([
         WIDGET_CLASS = 'formula-editor',
         CODE_SYNTAX_GUTTER = 'constraint-syntax';
 
-    function getConstraintResultElem(name, result) {
-        if (result === true) {
-            return $('<li class="clist-elem clist-true"><i class="glyphicon glyphicon-ok"/>' + name + '</li>');
-        } else if (result === false) {
-            return $('<li class="clist-elem clist-false"><i class="glyphicon glyphicon-remove"/>' + name + '</li>');
-        } else {
-            return $('<li class="clist-elem">' + name + '</li>');
+    function clearMarks(cm) {
+        var marks = cm.getAllMarks(),
+            i;
+
+        for (i = 0; i < marks.length; i += 1) {
+            marks[i].clear();
         }
+    }
+
+    function markConstraints(cm, resultObject) {
+        var line,
+            offset,
+            position,
+            constraintName,
+            lineNum = cm.lineCount(),
+            markOptions,
+            i,
+            constraintNameRegex = /\w+(?= *:-)/,
+            constraintNames = utils.getUserConstraintNames(cm.getValue());
+
+        clearMarks(cm);
+        for (i = 0; i < lineNum; i += 1) {
+            line = cm.getLine(i);
+            offset = 0;
+            constraintName = ':-';
+            while (constraintName) {
+                constraintName = (line.substr(offset).match(constraintNameRegex) || [''])[0];
+                position = offset + line.substr(offset).search(constraintNameRegex);
+
+                if (constraintName &&
+                    constraintNames.indexOf(constraintName) !== -1 &&
+                    resultObject.hasOwnProperty(constraintName)) {
+
+                    markOptions = {};
+                    markOptions.css = resultObject[constraintName] === true ? 'background-color:darkgreen' :
+                        'background-color:red';
+                    markOptions.title = resultObject[constraintName] === true ? 'constraint evaluated to TRUE' :
+                        'constraint evaluated to FALSE';
+                    cm.markText(
+                        {line: i, ch: position},
+                        {line: i, ch: position + constraintName.length},
+                        markOptions
+                    );
+                }
+
+                offset += position + (constraintName || '').length;
+            }
+        }
+
     }
 
     FormulaEditorWidget = function (logger, container, client) {
@@ -141,6 +182,7 @@ define([
         this._codemirror.on('change', function () {
             //clear syntax error signs from gutter
             self._codemirror.clearGutter(CODE_SYNTAX_GUTTER);
+            clearMarks(self._codemirror);
             self._codemirror.focus();
             self._codemirror.refresh();
             // If the content is changed from the last saved one we allow the save button.
@@ -175,12 +217,6 @@ define([
         this._autoSaveTimer = null;
         this._previousCodeState = null;
 
-        this._constraintList = this._el.find('#constraintlist').first();
-        // this._checkContraintsBtn = this._el.find('#checkBtn').first();
-        //
-        // this._checkContraintsBtn.on('click', function (event) {
-        //     self.onCheckConstraints(utils.getUserConstraintNames(self._codemirror.getValue()));
-        // });
         self._saveConstraintsBtn.attr('disabled', true);
 
         this._allOk = this._el.find('#allResultOk').first();
@@ -223,7 +259,7 @@ define([
 
         this._codemirror.refresh();
 
-        this._loader = new LoaderCircles({containerElement: this._el});
+        // this._loader = new LoaderCircles({containerElement: this._el});
     };
 
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
@@ -256,7 +292,6 @@ define([
             this._previousCodeState = this._codemirror.getValue();
             this.onSaveConstraints(this._previousCodeState);
             this._saveConstraintsBtn.attr('disabled', true);
-            this.setResults({}); //something changed, we clear results
         }
     };
 
@@ -269,10 +304,6 @@ define([
             clearTimeout(this._autoSaveTimer);
             this._autoSaveTimer = null;
         }
-    };
-
-    FormulaEditorWidget.prototype.getConstraints = function () {
-        return this._codemirror.getValue();
     };
 
     FormulaEditorWidget.prototype.setDomain = function (text, full) {
@@ -302,34 +333,23 @@ define([
     };
 
     FormulaEditorWidget.prototype.setResults = function (resultObject) {
-        var constraints = utils.getUserConstraintNames(this._codemirror.getValue()).sort(),
-            i,
-            allOk = true;
-        this._loader.stop();
-        this._constraintList.empty();
-        for (i = 0; i < constraints.length; i += 1) {
-            if (typeof resultObject[constraints[i]] === 'boolean') {
-                if (resultObject[constraints[i]]) {
-                    this._constraintList.append(getConstraintResultElem(constraints[i], true));
-                } else {
-                    allOk = false;
-                    this._constraintList.append(getConstraintResultElem(constraints[i], false));
-                }
-            } else {
+        var keys = Object.keys(resultObject || {}),
+            i = keys.length,
+            allOk = i === 0 ? false : true;
+
+        markConstraints(this._codemirror, resultObject);
+
+        while (allOk && i--) {
+            if (resultObject[keys[i]] !== true) {
                 allOk = false;
-                this._constraintList.append(getConstraintResultElem(constraints[i]));
             }
         }
+
         if (allOk) {
             this._allOk.show();
         } else {
             this._allOk.hide();
         }
-    };
-
-    FormulaEditorWidget.prototype.waitForResults = function () {
-        this.setResults({});
-        this._loader.start();
     };
 
     FormulaEditorWidget.prototype.setHookStatus = function (newState) {
@@ -407,10 +427,6 @@ define([
         }
     };
     /* * * * * * * * Visualizer event handlers * * * * * * * */
-
-    FormulaEditorWidget.prototype.onCheckConstraints = function () {
-        this._logger.warn('The "onCheckConstraints" function is not overwritten');
-    };
 
     FormulaEditorWidget.prototype.onSaveConstraints = function () {
         this._logger.warn('The "onSaveConstraints" function is not overwritten');

@@ -58,48 +58,6 @@ define(['js/Constants',
             self._client.setAttributes(CONSTANTS.PROJECT_ROOT_ID, '_formulaConstraints', constraints);
         };
 
-        this._widget.onCheckConstraints = function (constraints) {
-            self._widget.waitForResults();
-            var pluginContext = self._client.getCurrentPluginContext('Export2FORMULA', CONSTANTS.PROJECT_ROOT_ID);
-
-            // console.time('translate');
-            self._client.runServerPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
-                // console.timeEnd('translate');
-                if (err) {
-                    self._logger.error(err);
-                    self._widget.setResults({});
-                    return;
-                }
-
-                pluginContext = self._client.getCurrentPluginContext('CheckFORMULA', CONSTANTS.PROJECT_ROOT_ID);
-
-                //setting config parameters
-                pluginContext.pluginConfig = {
-                    formulaModule: pluginResult.artifacts[0],
-                    constraints: constraints.join(" ")
-                };
-
-                // console.time('check');
-                self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err, pluginResult) {
-                    // console.timeEnd('check');
-                    if (err || pluginResult.error) {
-                        self._logger.error(err || new Error(pluginResult.error));
-                        self._widget.setResults({});
-                    }
-
-                    if (pluginResult.messages.length > 0) {
-                        // we just put the first as a notification
-                        self._client.dispatchEvent(self._client.CONSTANTS.NOTIFICATION, {
-                            severity: pluginResult.messages[0].severity || 'info',
-                            message: '[Formula] ' + pluginResult.messages[0].message
-                        });
-                        // something was still off so let's just finish the loaderCircle
-                        self._widget.setResults({});
-                    }
-                });
-            });
-        };
-
         this._widget.onHookStateChanged = function (newSate) {
             if (newSate === 'on') {
                 // We have to set the hook for the project
@@ -130,6 +88,7 @@ define(['js/Constants',
         self._getCurrentHook(function (err, hook) {
             if (!err) {
                 self._widget.setHookStatus('on');
+                self._getSimpleResults();
             } else {
                 self._widget.setHookStatus('off');
             }
@@ -190,7 +149,7 @@ define(['js/Constants',
                             result = JSON.parse(result.text).result;
                             if (result) {
                                 clearInterval(interval);
-                                self._widget.setResults(result.constraints || []);
+                                self._widget.setResults(result.constraints || {});
                                 self._widget.setConstraintSyntaxErrors(result.syntaxError || "");
                                 if (result.error) {
                                     self._widget.setNetworkStatus('check-failure', result.error);
@@ -205,29 +164,7 @@ define(['js/Constants',
     };
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaEditorControl.prototype._eventCallback = function (events) {
-        var i = events ? events.length : 0,
-            event;
-
-        this._logger.debug('_eventCallback \'' + i + '\' items');
-
-        while (i--) {
-            event = events[i];
-            switch (event.etype) {
-                case CONSTANTS.TERRITORY_EVENT_LOAD:
-                    this._onLoad(event.eid);
-                    break;
-                case CONSTANTS.TERRITORY_EVENT_UPDATE:
-                    this._onUpdate(event.eid);
-                    break;
-                case CONSTANTS.TERRITORY_EVENT_UNLOAD:
-                    this._onUnload(event.eid);
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        this._logger.debug('_eventCallback \'' + events.length + '\' items - DONE');
+        this._refresh();
     };
 
     FormulaEditorControl.prototype._refresh = function () {
@@ -239,18 +176,6 @@ define(['js/Constants',
             this._widget.setResults({});
             this._widget.setNetworkStatus(null);
         }
-    };
-
-    FormulaEditorControl.prototype._onLoad = function (gmeId) {
-        this._refresh();
-    };
-
-    FormulaEditorControl.prototype._onUpdate = function (gmeId) {
-        this._refresh();
-    };
-
-    FormulaEditorControl.prototype._onUnload = function (gmeId) {
-        this._logger.error('Project root cannot be removed!!!');
     };
 
     FormulaEditorControl.prototype._stateActiveObjectChanged = function (model, activeObjectId) {
