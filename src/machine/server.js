@@ -4,46 +4,100 @@
 
 function executeHook(eventData) {
     var deferred = Q.defer(),
+        state = 0,
         directory,
+        formulaData,
         result;
 
-    // console.time('plugin');
+    logger.debug('executeHook - ', eventData.id);
     generate4ml(eventData)
-        .then(function (formulaData) {
-            // console.timeEnd('plugin');
-            // console.time('pre');
+        .then(function (formulaData_) {
+            logger.debug('4ml generated - ', eventData.id);
+            formulaData = formulaData_;
+            state = 1;
             return prepareFormula(eventData.id, formulaData);
         })
         .then(function (directory_) {
+            logger.debug('directory prepared - ', eventData.id);
             directory = directory_;
-            // console.timeEnd('pre');
-            // console.time('4ml');
-            return executeFormulaTasks(directory);
+            state = 2;
+            return executeFormulaTasks(directory, formulaData);
         })
         .then(function (result_) {
+            logger.debug('tasks executed - ', eventData.id);
             result = result_;
-            // console.timeEnd('4ml');
-            // console.time('post');
+            state = 3;
+
             return cleanFormula(directory);
         })
         .then(function () {
-            // console.timeEnd('post');
+            logger.debug('directory cleaned - ', eventData.id);
+            state = 4;
             return storeHookResult(eventData.id, result);
         })
         .then(deferred.resolve)
-        .catch(deferred.reject);
+        .catch(function (err) {
+            logger.debug('executeHook failure - ', eventData.id, ' - ', state);
+            switch (state) {
+                case 0:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to generate 4ml: ' + err
+                    };
+                    break;
+                case 1:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to prepare work directory: ' + err
+                    };
+                    break;
+                case 2:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure execute tasks: ' + err
+                    };
+                    break;
+                case 3:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure cleaning work directory: ' + err
+                    };
+                    break;
+                default:
+                    result = {
+                        constraints: null,
+                        syntaxError: '',
+                        error: 'Failure to update status: ' + err
+                    };
+            }
+            storeHookResult(eventData.id, result)
+                .then(function () {
+                    logger.error('ExecuteHookFailure:', eventData.id, JSON.stringify(result));
+                    if (state === 2) {
+                        return cleanFormula(directory);
+                    }
+                    return;
+                })
+                .then(deferred.resolve)
+                .catch(deferred.reject);
+        });
 
     return deferred.promise;
 }
 
 function generate4ml(parameters) {
     var deferred = Q.defer();
-    logger.debug('generate4ml parameters', parameters);
+    logger.debug('generate4ml parameters (' + parameters.owner +
+        ',' + parameters.projectName + ',' + parameters.commitHash + ')');
 
     runPlugin.main(['_', '_', 'GenFORMULA', parameters.projectName,
             '-c', parameters.commitHash, '-o', parameters.owner, '-u', parameters.data.userId],
         function (err, result) {
-            logger.debug('generate4ml plugin done', result);
+            logger.debug('generate4ml plugin done:', err, result.success);
             if (err) {
                 deferred.reject(err);
                 return;
@@ -83,7 +137,7 @@ function prepareFormula(id, formulaData) {
             return;
         }
 
-        FS.writeFile(PATH.join(directory, '/module.4ml'), formulaData.project, function (err) {
+        FS.writeFile(PATH.join(directory, '/module'), formulaData.project, function (err) {
             error = error || err;
             if (--fileCounter === 0) {
                 allDone();
@@ -91,7 +145,7 @@ function prepareFormula(id, formulaData) {
         });
 
         //file for constraints
-        FS.writeFile(PATH.join(directory, '/constraints.json'), formulaData.constraints, function (err) {
+        FS.writeFile(PATH.join(directory, '/constraints'), formulaData.constraints, function (err) {
             error = error || err;
             if (--fileCounter === 0) {
                 allDone();
@@ -130,64 +184,131 @@ function cleanFormula(directory) {
     return deferred.promise;
 }
 
-function executeFormulaTasks(directory) {
+function executeFormulaTasks(directory, formulaData) {
     var deferred = Q.defer();
     logger.debug('executeFormulaTasks directory', directory);
     //all the different Formula tasks can be executed independently
     Q.allSettled([
-        executeConstraints(directory)
+        executeConstraints(directory, formulaData)
     ])
         .then(function (results) {
-            var output = {};
+            var output = {error: '', syntaxError: ''};
 
             // Constraint results
             if (results[0].state === 'rejected') {
                 logger.error('cannot get constraint results:', results[0].reason);
-                deferred.reject(new Error('failed to check constraints'));
+                deferred.reject(new Error('failed to check constraints: ' + results[0].reason));
                 return;
+            } else if (results[0].value instanceof Error) {
+                output.syntaxError = results[0].value.message;
+                logger.debug('executeFormulaTasks done but has failed syntax,', output);
+            } else {
+                output.constraints = results[0].value;
+                logger.debug('executeFormulaTasks done, output', output);
             }
-            output.constraints = results[0].value;
-            logger.debug('executeFormulaTasks done, output', output);
             deferred.resolve(output);
         });
 
     return deferred.promise;
 }
 
-function executeConstraints(directory) {
+function getConstraintStartLine(formulaProject) {
+    var formulaLines = formulaProject.split('\n'),
+        i;
+    for (i = 0; i < formulaLines.length; i += 1) {
+        if (formulaLines[i].indexOf('domain Constraints extends Language') === 0) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
+function convertErrorEntry(inEntry, startLine) {
+    if (startLine === 0) {
+        return inEntry;
+    }
+    var lineNumber = Number(inEntry.substring(1, inEntry.indexOf(','))) || 0,
+        newLineNumber;
+
+    newLineNumber = lineNumber - startLine;
+
+    if (newLineNumber >= 0) {
+        return inEntry.replace('' + lineNumber, '' + newLineNumber);
+    }
+
+    return inEntry;
+}
+function checkSyntax(directory, formulaData) {
+    var deferred = Q.defer();
+
+    logger.debug('Checking the syntax of the input formula translation');
+    EXECUTE(config.environment + ' ' + config.commands.check + ' -l:module -x', {
+        cwd: directory
+    }, function (err, stdout) {
+        if (!err) {
+            logger.debug('no syntax error');
+            deferred.resolve(null);
+            return;
+        }
+
+        var constraintStartLine = getConstraintStartLine(formulaData.project),
+            stdoutLines = stdout.split('\n'),
+            resultTxt = '',
+            i;
+
+        for (i = 0; i < stdoutLines.length; i += 1) {
+            if (stdoutLines[i].indexOf('module (') === 0) {
+                resultTxt += convertErrorEntry(stdoutLines[i].substr(7), constraintStartLine) + '\n';
+            }
+        }
+        logger.debug('syntax error:', resultTxt);
+        deferred.reject(new Error(resultTxt));
+    });
+
+    return deferred.promise;
+}
+
+function executeConstraints(directory, formulaData) {
     var deferred = Q.defer(),
         result;
 
     logger.debug('executeConstraints directory', directory);
     EXECUTE(config.environment + ' ' +
-        config.commands.constraints + ' -f module.4ml -c constraints.json',
+        config.commands.constraints + ' -f module -c constraints',
         {
             cwd: directory
         },
         function (err) {
             if (err) {
-                deferred.reject(err);
-                return;
-            }
-            FS.readFile(PATH.join(directory, 'queryresults.json'), function (err, resultAsString) {
-                if (err) {
-                    deferred.reject(err);
-                    return;
-                }
-
-                try {
-                    result = JSON.parse(resultAsString);
-                    for (var i in result) {
-                        result[i] = result[i] === 'true';
+                checkSyntax(directory, formulaData)
+                    .then(function () {
+                        logger.info('Executing constraint check failed with good syntax:', err);
+                        deferred.reject(err);
+                    })
+                    .catch(function (syntaxErr) {
+                        deferred.resolve(syntaxErr);
+                    });
+            } else {
+                FS.readFile(PATH.join(directory, 'queryresults.json'), function (err, resultAsString) {
+                    if (err) {
+                        deferred.reject(err);
+                        return;
                     }
-                } catch (err) {
-                    deferred.reject(err);
-                    return;
-                }
 
-                logger.debug('executeConstraints done', result);
-                deferred.resolve(result);
-            });
+                    try {
+                        result = JSON.parse(resultAsString);
+                        for (var i in result) {
+                            result[i] = result[i] === 'true';
+                        }
+                    } catch (err) {
+                        deferred.reject(err);
+                        return;
+                    }
+
+                    logger.debug('executeConstraints done', result);
+                    deferred.resolve(result);
+                });
+            }
         }
     );
 
@@ -288,7 +409,7 @@ __router.put('/4ml', function (req, res) {
             })
             .catch(function (err) {
                 res.status(500);
-            })
+            });
         storeCommitEvent(req.body)
             .then(function () {
                 res.sendStatus(200);
@@ -331,15 +452,14 @@ __router.get('/4ml/:projectId/:commitHash', function (req, res) {
 __httpServer = require('http').createServer(__router);
 
 __httpServer.on('connection', function (socket) {
-    logger.info('new connection', socket.id);
 });
 
-__httpServer.on('clientError', function (err, socket) {
-    logger.error('clientError [' + socket.id + ']', err);
+__httpServer.on('clientError', function (err/*, socket*/) {
+    logger.error('clientError: ', err);
 });
 
 __httpServer.on('error', function (err) {
-    logger.error('serverError', err);
+    logger.error('serverError: ', err);
 });
 
 __httpServer.listen(config.port, function (err) {

@@ -8,11 +8,6 @@ define([
     'text!./Templates/language.4ml.ejs'
 ], function (ejs, languageTemplate) {
 
-    /**
-     * The funciton generates the Formula domain representaiton of the model.
-     *
-     * @param gmeNodes[] metaNodes - The array of gmeNodes that provides the complete language of the project.
-     */
     function getLanguageAsString(client) {
         var i, languageNodes = client.getAllMetaNodes(),
             node,
@@ -50,12 +45,44 @@ define([
     }
 
     function getUserConstraintNames(userConstraints) {
-        return userConstraints.match(/\w+(?= *:-[\s\S]*\.)/g) || [];
+        var names = userConstraints.match(/\w+(?= *:-[\s\S]*\.)/g) || [],
+            i = names.length;
+        while (i--) {
+            if (names.indexOf(names[i]) !== i) {
+                names.splice(i, 1);
+            }
+        }
+        return names;
+    }
+
+    function getCompleteFormulaTranslation(client, callback) {
+        var startingCommit = client.getActiveCommitHash(),
+            pluginContext = client.getCurrentPluginContext('GenFORMULA', '');
+
+        client.runServerPlugin('GenFORMULA', pluginContext, function (err, pluginResult) {
+            if (startingCommit === client.getActiveCommitHash()) {
+                if (!err) {
+                    if (pluginResult.success === true && pluginResult.messages.length > 1) {
+                        pluginResult = pluginResult.messages[0].message;
+
+                        //removing the first two lines to make identical to getLanguagesAsString
+                        pluginResult = pluginResult.split('\n');
+                        pluginResult.splice(0,2);
+                        pluginResult = pluginResult.join('\n');
+                    } else {
+                        err = new Error("Invalid result format received!");
+                    }
+                }
+
+                callback(err, pluginResult);
+            }
+        });
     }
 
     return {
         getLanguageAsString: getLanguageAsString,
         convertIdString: convertIdString,
-        getUserConstraintNames: getUserConstraintNames
+        getUserConstraintNames: getUserConstraintNames,
+        getCompleteFormulaTranslation: getCompleteFormulaTranslation
     }
 });

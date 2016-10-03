@@ -58,3 +58,16 @@
     position: absolute;
     right: 10px;
 }
+
+.formula-editor .network-status-btn {
+    position: absolute;
+    right: 30px;
+}
+
+.formula-editor .floating-translate-btn {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    z-index: 1000;
+    padding: 5px;
+}

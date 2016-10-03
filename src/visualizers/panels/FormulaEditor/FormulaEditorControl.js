@@ -33,7 +33,6 @@ define(['js/Constants',
         this._widget = options.widget;
 
         this._currentNodeId = null;
-        this._currentNodeParentId = undefined;
 
         this._initWidgetEventHandlers();
 
@@ -57,48 +56,6 @@ define(['js/Constants',
 
         this._widget.onSaveConstraints = function (constraints) {
             self._client.setAttributes(CONSTANTS.PROJECT_ROOT_ID, '_formulaConstraints', constraints);
-        };
-
-        this._widget.onCheckConstraints = function (constraints) {
-            self._widget.waitForResults();
-            var pluginContext = self._client.getCurrentPluginContext('Export2FORMULA', CONSTANTS.PROJECT_ROOT_ID);
-
-            // console.time('translate');
-            self._client.runServerPlugin('Export2FORMULA', pluginContext, function (err, pluginResult) {
-                // console.timeEnd('translate');
-                if (err) {
-                    self._logger.error(err);
-                    self._widget.setResults({});
-                    return;
-                }
-
-                pluginContext = self._client.getCurrentPluginContext('CheckFORMULA', CONSTANTS.PROJECT_ROOT_ID);
-
-                //setting config parameters
-                pluginContext.pluginConfig = {
-                    formulaModule: pluginResult.artifacts[0],
-                    constraints: constraints.join(" ")
-                };
-
-                // console.time('check');
-                self._client.runServerPlugin('CheckFORMULA', pluginContext, function (err, pluginResult) {
-                    // console.timeEnd('check');
-                    if (err || pluginResult.error) {
-                        self._logger.error(err || new Error(pluginResult.error));
-                        self._widget.setResults({});
-                    }
-
-                    if (pluginResult.messages.length > 0) {
-                        // we just put the first as a notification
-                        self._client.dispatchEvent(self._client.CONSTANTS.NOTIFICATION, {
-                            severity: pluginResult.messages[0].severity || 'info',
-                            message: '[Formula] ' + pluginResult.messages[0].message
-                        });
-                        // something was still off so let's just finish the loaderCircle
-                        self._widget.setResults({});
-                    }
-                });
-            });
         };
 
         this._widget.onHookStateChanged = function (newSate) {
@@ -131,49 +88,11 @@ define(['js/Constants',
         self._getCurrentHook(function (err, hook) {
             if (!err) {
                 self._widget.setHookStatus('on');
+                self._getSimpleResults();
             } else {
                 self._widget.setHookStatus('off');
             }
         });
-
-        // var desc = this._getObjectDescriptor(nodeId),
-        //     self = this;
-        //
-        // self._logger.debug('activeObject nodeId \'' + nodeId + '\'');
-        //
-        // // Remove current territory patterns
-        // if (self._currentNodeId) {
-        //     self._client.removeUI(self._territoryId);
-        // }
-        //
-        // self._currentNodeId = nodeId;
-        // self._currentNodeParentId = undefined;
-        //
-        // if (typeof self._currentNodeId === 'string') {
-        //     // Put new node's info into territory rules
-        //     self._selfPatterns = {};
-        //     self._selfPatterns[nodeId] = {children: 0};  // Territory "rule"
-        //
-        //     self._widget.setTitle(desc.name.toUpperCase());
-        //
-        //     if (typeof desc.parentId === 'string') {
-        //         self.$btnModelHierarchyUp.show();
-        //     } else {
-        //         self.$btnModelHierarchyUp.hide();
-        //     }
-        //
-        //     self._currentNodeParentId = desc.parentId;
-        //
-        //     self._territoryId = self._client.addUI(self, function (events) {
-        //         self._eventCallback(events);
-        //     });
-        //
-        //     // Update the territory
-        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
-        //
-        //     self._selfPatterns[nodeId] = {children: 1};
-        //     self._client.updateTerritory(self._territoryId, self._selfPatterns);
-        // }
     };
 
     FormulaEditorControl.prototype._refreshConstraints = function () {
@@ -187,122 +106,76 @@ define(['js/Constants',
         }
     };
 
-    // FormulaEditorControl.prototype._getSimpleResults = function () {
-    //     // this._widget.setResults('checking');
-    //     // now we check if we have results
-    //     var self = this,
-    //         project = self._client.getProjectObject(),
-    //         rootNode = self._client.getNode(CONSTANTS.PROJECT_ROOT_ID),
-    //         formulaInfo;
-    //
-    //     this._widget.setResults({}); //initializing results
-    //
-    //     if (rootNode) {
-    //         formulaInfo = rootNode.getAttribute('_formulaInfo');
-    //         if (formulaInfo && typeof formulaInfo.originCommitHash === 'string' &&
-    //             Object.keys(formulaInfo.simpleCheckResults || {}).length !== 0) {
-    //             // we have results and a possible origin commit hash so let's check it out
-    //             project.loadObject(self._client.getActiveCommitHash(), function (err, commitObj) {
-    //                 if (err) {
-    //                     self._logger.error(err);
-    //                 } else {
-    //                     if (commitObj.parents && commitObj.parents.indexOf(formulaInfo.originCommitHash) > -1 &&
-    //                         commitObj.parents.length === 1) {
-    //                         self._widget.setResults(formulaInfo.simpleCheckResults);
-    //                     }
-    //                 }
-    //             });
-    //         }
-    //     }
-    // };
-
     FormulaEditorControl.prototype._getSimpleResults = function () {
         var self = this,
             commitHash = self._client.getActiveCommitHash(),
             projectId = self._client.getActiveProjectId(),
             interval,
-            waiting = false;
+            waiting = false,
+            numberOfTries = 0,
+            maxTries = 100;
 
         self._result.state = 'collecting';
         self._result.projectId = projectId;
         self._result.commitHash = commitHash;
 
-        self._widget.setResults({}); // TODO we should state that we are loading the results
+        self._widget.setResults({});
+        self._widget.setNetworkStatus(null);
         interval = setInterval(function () {
             if (!waiting) {
                 waiting = true;
+                self._widget.setNetworkStatus('wait');
                 superagent.get('4ml/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(commitHash))
                     .end(function (err, result) {
                         waiting = false;
+                        numberOfTries += 1;
                         // First, we check if our version is still the one to show
                         if (commitHash !== self._result.commitHash || projectId !== self._result.projectId) {
                             clearInterval(interval);
+                            self._widget.setNetworkStatus(null);
                             return;
                         }
 
                         // Then, we check how to handle the result
                         if (err) {
-                            // TODO we should state the error/retry
-                            // console.log(err.message.indexOf('Internal Server Error') !== -1);
-
                             if (err.message.indexOf('Internal Server Error') !== -1 ||
-                                err.message.indexOf('Forbidden') !== -1) {
+                                err.message.indexOf('Forbidden') !== -1 ||
+                                numberOfTries === maxTries) {
                                 //there will be no better result
                                 clearInterval(interval);
+                                self._widget.setNetworkStatus('error');
                             }
                         } else {
                             result = JSON.parse(result.text).result;
-
-                            if (result === null) {
-                                // TODO we should state that the result is under computation
-                            } else {
+                            if (result) {
                                 clearInterval(interval);
-                                self._widget.setResults(result.constraints);
+                                self._widget.setResults(result.constraints || {});
+                                self._widget.setConstraintSyntaxErrors(result.syntaxError || "");
+                                if (result.error) {
+                                    self._widget.setNetworkStatus('check-failure', result.error);
+                                } else {
+                                    self._widget.setNetworkStatus(null);
+                                }
                             }
                         }
                     });
             }
-        }, 1000);
+        }, 500);
     };
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaEditorControl.prototype._eventCallback = function (events) {
-        var i = events ? events.length : 0,
-            event;
+        this._refresh();
+    };
 
-        this._logger.debug('_eventCallback \'' + i + '\' items');
+    FormulaEditorControl.prototype._refresh = function () {
+        this._refreshConstraints();
 
-        while (i--) {
-            event = events[i];
-            switch (event.etype) {
-                case CONSTANTS.TERRITORY_EVENT_LOAD:
-                    this._onLoad(event.eid);
-                    break;
-                case CONSTANTS.TERRITORY_EVENT_UPDATE:
-                    this._onUpdate(event.eid);
-                    break;
-                case CONSTANTS.TERRITORY_EVENT_UNLOAD:
-                    this._onUnload(event.eid);
-                    break;
-                default:
-                    break;
-            }
+        if (this._widget.getHookStatus() === 'on') {
+            this._getSimpleResults();
+        } else {
+            this._widget.setResults({});
+            this._widget.setNetworkStatus(null);
         }
-
-        this._logger.debug('_eventCallback \'' + events.length + '\' items - DONE');
-    };
-
-    FormulaEditorControl.prototype._onLoad = function (gmeId) {
-        this._refreshConstraints();
-        this._getSimpleResults();
-    };
-
-    FormulaEditorControl.prototype._onUpdate = function (gmeId) {
-        this._refreshConstraints();
-        this._getSimpleResults();
-    };
-
-    FormulaEditorControl.prototype._onUnload = function (gmeId) {
-        this._logger.error('Project root cannot be removed!!!');
     };
 
     FormulaEditorControl.prototype._stateActiveObjectChanged = function (model, activeObjectId) {

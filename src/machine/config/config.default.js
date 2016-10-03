@@ -5,7 +5,8 @@ module.exports = {
     hookId: 'FormulaMachineHook',
     environment: 'mono', // 'mono' || '' for native windows execution
     commands: {
-        'constraints': '../src/machine/mono/Query.exe'
+        'constraints': '../src/machine/mono/Query.exe',
+        'check': '../src/machine/mono/CommandLine.exe'
     },
     log: {
         transports: [{
@@ -13,7 +14,7 @@ module.exports = {
             options: {
                 name: 'info-file',
                 filename: 'machine.log',
-                level: 'debug',
+                level: 'info',
                 json: false
             }
         }, {
