@@ -1,15 +1,32 @@
 <%
 var path,
+        i,
         baseName,
-        numOfAttributes,
-        numOfPointers,
-        isConnection,
-        counter,
-        connectionTypes = [],
-        allTypes = [];
+        hasSets,
+        counter;
 
 function convertName(name) {
-    return name.replace(/ /g, "_");
+    name = name.replace(/ /g, "_");
+    name = name.replace(/\./g, "__");
+    return name;
+}
+
+function getTypeName(path) {
+    return convertName(nodes[path].name) + 'TYPE';
+}
+
+function getTypeArrayString(paths, isTypes, noEnd) {
+    var i, text = '';
+
+    for (i = 0; i < paths.length; i += 1) {
+        // TODO check if there is a possibility that we use types but not any...
+        text += (isTypes === true ? 'any ' : '') + convertName(nodes[paths[i]].name) + (isTypes === true ? 'TYPE' : '');
+        if (!noEnd || i + 1 !== paths.length) {
+            text += ' + ';
+        }
+    }
+
+    return text;
 }
 
 function getFormulaTypeOfAttribute(attributeDescriptor) {
@@ -25,109 +42,51 @@ function getFormulaTypeOfAttribute(attributeDescriptor) {
             return 'Boolean';
     }
 }
-
-function collectInstanceTypes() {
-    var types = [],
-            typePath;
-
-    for (typePath in nodes) {
-        if (nodes[typePath].base === path) {
-            types.push(convertName(nodes[typePath].name));
-        }
-    }
-    return types;
-}
-
-// this function take into account the order of param definitions which is ...,'name','src+dst','attributes','pointers'
-function isClosingParameter(paramName) {
-    switch (paramName) {
-        case 'name':
-            if (!numOfAttributes && !numOfPointers && !isConnection) {
-                return true;
-            }
-            return false;
-        case 'connection':
-            if (!numOfAttributes && !numOfPointers) {
-                return true;
-            }
-            return false;
-        case 'attributes':
-            if (numOfAttributes && !numOfPointers) {
-                return true;
-            }
-            return false;
-
-    }
-}
 %>
 domain Language {
 <%
-for(var path in nodes) {
+for(path = 0; path < order.length; path += 1) {
     //node definition
-    baseName = convertName(nodes[path].name);
-    numOfAttributes = nodes[path].attributeNames.length;
-    isConnection = nodes[path].isConnection;
-
-    allTypes.push(baseName);
-    if (isConnection) {
-        connectionTypes.push(baseName);
-        nodes[path].pointerNames.splice(nodes[path].pointerNames.indexOf('src'), 1);
-        nodes[path].pointerNames.splice(nodes[path].pointerNames.indexOf('dst'), 1);
-    }
-
-    numOfPointers = nodes[path].pointerNames.length;
+    baseName = convertName(nodes[order[path]].name);
+    hasSets = nodes[order[path]].setNames.length > 0;
 %>
-// <%= nodes[path].name %>
-__<%= baseName %> ::= new (
+// <%= baseName %>
+<%= baseName %> ::= new (
 id: String,
-base: any GMENode + {NULL},
-parent: any GMENode + {NULL},
-name: String<% if(isClosingParameter('name')){ %>).<% } else { %>,<% } %> <%
-if(isConnection){ %>
-src: any GMENode + {NULL},
-dst: any GMENode + {NULL}<% if(isClosingParameter('connection')){ %>).<% } else { %>,<% }} %>
-<% if(numOfAttributes){ %>attributes: any Attr__<%= baseName %> + {NULL}<% } if(isClosingParameter('attributes')){ %>).<% } else { %>,<% } %>
-<% if(numOfPointers){ %>pointers: any Ptr__<%= baseName %> + {NULL}).<% } %>
-<% if(numOfAttributes){
-%>Attr__<%= baseName %> ::= new (<%
+parent: <%= getTypeArrayString(nodes[order[path]].parentTypes, true, false) %>{NULL},
+attributes: any Attr__<%= baseName %>,
+pointers: any Ptr__<%= baseName %> ).
+Attr__<%= baseName %> ::= new (<%
     counter = 0;
-for(var i = 0;i < nodes[path].attributeNames.length;i += 1){
+for(i = 0; i < nodes[order[path]].attributeNames.length; i += 1){
     counter += 1;
-%> <%= nodes[path].attributeNames[i] %>:<%= getFormulaTypeOfAttribute(nodes[path].meta.attributes[nodes[path].attributeNames[i]]) %> <%
-if (counter === numOfAttributes){ %>).<% }else{ %>,<% }
-} %> <% } %>
-<% if(numOfPointers){
-%>Ptr__<%= baseName %> ::= new (<%
+%> <%= nodes[order[path]].attributeNames[i] %>:<%=
+    getFormulaTypeOfAttribute(nodes[order[path]].meta.attributes[nodes[order[path]].attributeNames[i]]) %> <%
+if (counter === nodes[order[path]].attributeNames.length){ %>).<% }else{ %>,<% }
+} %>
+Ptr__<%= baseName %> ::= new (<%
     counter = 0;
-        for(var i in nodes[path].pointerNames){
+for(i = 0; i < nodes[order[path]].pointerNames.length;i += 1){
     counter += 1;
-%> <%= nodes[path].pointerNames[i] %>: any GMENode + {NULL}<%
-if (counter === numOfPointers){ %>).<% }else{ %> , <% }
-} %> <% } %>
-<%= baseName %> ::= <% var types = collectInstanceTypes(); for(var i = 0;i < types.length;i += 1){ %> <%= types[i] %> +<% } %> __<%= baseName %>.
-// <%= nodes[path].name %> - end
+%> <%= nodes[order[path]].pointerNames[i] %>: <%=
+    getTypeArrayString(nodes[order[path]].pointerInfo[nodes[order[path]].pointerNames[i]], true, false) %>{NULL}<%
+if (counter === nodes[order[path]].pointerNames.length){ %> ).<% }else{ %> , <% }
+} %>
+<%= getTypeName(order[path]) %> ::= <%= getTypeArrayString(nodes[order[path]].subTypes, false, true) %>.
+// <%= baseName %> - end
 <%
 }
 %>
-// The superset of all node types: GMENode.
-GMENode ::= <%
-for(var i = 0;i < allTypes.length;i += 1){
-%><%= allTypes[i] %><% if(i < allTypes.length - 1){ %> + <% }else{ %>.<% }
-}
-%>
-
-// The superset of all connection types: GMEConnection.
-GMEConnection ::=<%
-for(var i = 0;i < connectionTypes.length;i += 1){
-%><%= connectionTypes[i] %><% if(i < connectionTypes.length - 1){ %> + <% }else{ %>.<% }
-}
-%>
+// The representation of all nodes: GMENode
+GMENode ::= <%= getTypeArrayString(order, false, true) %>.
 
 // The representation of the containment relation: GMEContainment
 GMEContainment ::= (child: GMENode, parent:GMENode + {NULL}).
-GMEContainment(child, parent) :- child is GMENode, parent = child.parent ; GMEContainment(child, x), GMEContainment(x, parent).
+GMEContainment(child, parent) :- child is GMENode, parent = child.parent ;
+GMEContainment(child, x), GMEContainment(x, parent).
 
 // The representation of the inheritance relation: GMEInheritance
-GMEInheritance ::= (child: GMENode, base: GMENode + {NULL}).
-GMEInheritance(child, base) :- child is GMENode, base = child.base ; GMEInheritance(child, x), GMEInheritance(x, base).
+GMEInheritance ::= (node: GMENode, base: GMENode + {NULL}).
+GMEInheritance(node, base) :- node is GMENode, base = node.pointers.base ;
+GMEInheritance(node, x), GMEInheritance(x, base).
 }

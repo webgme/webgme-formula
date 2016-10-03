@@ -28,6 +28,106 @@ define([
              utils) {
     'use strict';
 
+    function getSubTypesOfNode(core, metaNodes, path) {
+        var subTypePaths = [],
+            subTypePath;
+
+        for (subTypePath in metaNodes) {
+            if (core.isTypeOf(metaNodes[subTypePath], metaNodes[path])) {
+                subTypePaths.push(subTypePath);
+            }
+        }
+        subTypePaths.sort();
+
+        return subTypePaths;
+    }
+
+    function getParentTypes(core, metaNodes, path) {
+        var parentTypePaths = [],
+            parentTypePath;
+
+        for (parentTypePath in metaNodes) {
+            if (core.isValidChildOf(metaNodes[path], metaNodes[parentTypePath])) {
+                parentTypePaths.push(parentTypePath);
+            }
+        }
+
+        parentTypePaths.sort();
+
+        return parentTypePaths;
+    }
+
+    function getPointerInfo(core, metaNodes, path) {
+        var info = {},
+            names = core.getValidPointerNames(metaNodes[path]),
+            i, targetPath;
+
+        info['base'] = ['/1'];
+        for (i = 0; i < names.length; i += 1) {
+            info[names[i]] = [];
+            for (targetPath in metaNodes) {
+                if (core.isValidTargetOf(metaNodes[targetPath], metaNodes[path], names[i])) {
+                    info[names[i]].push(targetPath);
+                }
+            }
+            info[names[i]].sort();
+        }
+
+        return info;
+    }
+
+    function getSetInfo(core, metaNodes, path) {
+        var info = {},
+            names = core.getValidSetNames(metaNodes[path]),
+            i, targetPath;
+
+        for (i = 0; i < names.length; i += 1) {
+            info[names[i]] = [];
+            for (targetPath in metaNodes) {
+                if (core.isValidTargetOf(metaNodes[targetPath], metaNodes[path], names[i])) {
+                    info[names[i]].push(targetPath);
+                }
+            }
+            info[names[i]].sort();
+        }
+
+        return info;
+    }
+
+    function generateLanguageDomain(core, metaNodes) {
+        var ejsParameters = {
+            order: Object.keys(metaNodes || {}).sort(),
+            nodes: {}
+        }, i, node;
+
+        for (i = 0; i < ejsParameters.order.length; i += 1) {
+            node = metaNodes[ejsParameters.order[i]];
+            ejsParameters.nodes[ejsParameters.order[i]] = {
+                id: ejsParameters.order[i],
+                // guid: self.core.getGuid(node),
+                // base: self.core.getPath(self.core.getBase(node)),
+                // type: self.core.getPath(self.core.getBaseType(node)),
+                name: core.getFullyQualifiedName(node),
+                parentTypes: getParentTypes(core, metaNodes, ejsParameters.order[i]),
+                subTypes: getSubTypesOfNode(core, metaNodes, ejsParameters.order[i]),
+                // isAbstract: self.core.isAbstract(node),
+                // isConnection: self.core.isConnection(node),
+                meta: core.getJsonMeta(node),
+                pointerNames: core.getValidPointerNames(node),
+                pointerInfo: getPointerInfo(core, metaNodes, ejsParameters.order[i]),
+                attributeNames: core.getValidAttributeNames(node),
+                setNames: core.getValidSetNames(node),
+                setInfo: getSetInfo(core, metaNodes, ejsParameters.order[i])
+            };
+            ejsParameters.nodes[ejsParameters.order[i]].pointerNames.push('base');
+            ejsParameters.nodes[ejsParameters.order[i]].pointerNames.sort();
+            ejsParameters.nodes[ejsParameters.order[i]].attributeNames.sort();
+            ejsParameters.nodes[ejsParameters.order[i]].setNames.sort();
+        }
+
+        return ejs.render(languageTemplate, ejsParameters);
+    }
+
     pluginMetadata = JSON.parse(pluginMetadata);
 
     /**
@@ -67,48 +167,15 @@ define([
         // Use self to access core, project, result, logger etc from PluginBase.
         // These are all instantiated at this point.
         var self = this,
-            languageNodes = self.core.getAllMetaNodes(self.rootNode),
-            i, node,
-            languageParameters = {
-                // pathToName: {},
-                nodes: {}
-            },
             languageText,
             nodeTexts = [];
 
-        for (i in languageNodes) {
-            node = languageNodes[i];
-            languageParameters.nodes[i] = {
-                id: self.core.getPath(node),
-                // guid: self.core.getGuid(node),
-                base: self.core.getPath(self.core.getBase(node)),
-                // type: self.core.getPath(self.core.getBaseType(node)),
-                name: self.core.getAttribute(node, 'name'),
-                parent: self.core.getPath(self.core.getParent(node)),
-                // isAbstract: self.core.isAbstract(node),
-                // isMetaType: self.core.getBaseType(node) === node,
-                isConnection: self.core.isConnection(node),
-                meta: self.core.getJsonMeta(node),
-                pointerNames: self.core.getValidPointerNames(node).sort(),
-                attributeNames: self.core.getValidAttributeNames(node).sort()
-            };
-
-            // languageParameters.pathToName[i] = self.core.getAttribute(node, 'name');
-        }
-
-        languageText = ejs.render(languageTemplate, languageParameters);
+        languageText = generateLanguageDomain(self.core, self.core.getAllMetaNodes(self.rootNode));
 
         self.core.traverse(self.rootNode, {excludeRoot: true}, function (visited, next) {
             // This is the visit function
-            //TODO check how to remove meta elements from the model
-            /*if(self.core.isMetaNode(visited)){
-                next(null);
-                return;
-            }*/
             var nodeParameters = {
                     id: self.core.getPath(visited),
-                    base: self.core.getBase(visited) === null ? 'NULL' :
-                        self.core.getPath(self.core.getBase(visited)),
                     parent: self.core.getParent(visited) === null ? 'NULL' :
                         self.core.getPath(self.core.getParent(visited)),
                     type: {
@@ -116,13 +183,19 @@ define([
                         id: self.core.getPath(self.core.getBaseType(visited))
                     },
                     name: self.core.getAttribute(visited, 'name'),
-                    pointerNames: self.core.getValidPointerNames(visited).sort(),
+                    pointerNames: self.core.getValidPointerNames(visited),
                     attributeNames: self.core.getValidAttributeNames(visited).sort(),
-                    isConnection: self.core.isConnection(visited),
+                    setNames: self.core.getValidSetNames(visited).sort(),
                     attributes: {},
-                    pointers: {}
+                    pointers: {},
+                    sets: {}
                 },
                 i;
+
+            nodeParameters.pointerNames.push('base');
+            nodeParameters.pointerNames.sort();
+            nodeParameters.attributeNames.sort();
+            nodeParameters.setNames.sort();
 
             for (i = 0; i < nodeParameters.attributeNames.length; i += 1) {
                 nodeParameters.attributes[nodeParameters.attributeNames[i]] = {
@@ -134,6 +207,11 @@ define([
             for (i = 0; i < nodeParameters.pointerNames.length; i += 1) {
                 nodeParameters.pointers[nodeParameters.pointerNames[i]] =
                     self.core.getPointerPath(visited, nodeParameters.pointerNames[i]);
+            }
+
+            for (i = 0; i < nodeParameters.setNames.length; i += 1) {
+                nodeParameters.sets[nodeParameters.setNames[i]] =
+                    self.core.getMemberPaths(visited, nodeParameters.setNames[i]).sort();
             }
 
             nodeTexts.push(ejs.render(nodeTemplate, nodeParameters));
