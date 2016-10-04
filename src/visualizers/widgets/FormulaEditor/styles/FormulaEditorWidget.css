@@ -23,6 +23,17 @@
     padding-top: 4px;
 }
 
+.formula-editor .toolbar-separator {
+    margin-left: 0;
+    margin-right: 0;
+    border-right: 1px solid #DADFE7;
+    width: 0;
+    height: 26px;
+    display: inline-block;
+    vertical-align: middle;
+    position: relative;
+}
+
 .formula-editor .btn {
     padding: 0px;
 }
