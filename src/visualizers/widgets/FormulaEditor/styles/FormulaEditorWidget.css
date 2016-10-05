@@ -21,7 +21,6 @@
     display: inline-block;
     position: relative;
     padding-top: 4px;
-    top: 2px;
 }
 
 .formula-editor .toolbar-button .active {
