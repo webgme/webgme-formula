@@ -129,7 +129,7 @@ function prepareFormula(id, formulaData) {
             deferred.resolve(directory);
         };
 
-    logger.debug('prepareFormula id, formulaData', id, formulaData);
+    logger.debug('prepareFormula', id);
 
     FS.mkdir(directory, function (err) {
         if (err) {
@@ -401,31 +401,6 @@ __router.put('/4ml', function (req, res) {
     res.status(404);
     res.send(err);
     return;
-
-    if (req && req.body) {
-        reExecuteHook(req.body)
-            .then(function () {
-
-            })
-            .catch(function (err) {
-                res.status(500);
-            });
-        storeCommitEvent(req.body)
-            .then(function () {
-                res.sendStatus(200);
-                return executeHook(req.body);
-            })
-            .then(function () {
-                //TODO do we need any postprocessing??
-            })
-            .catch(function (err) {
-                res.status(500);
-                res.send(err);
-            });
-    } else {
-        logger.info('unknown POST event');
-        res.sendStatus(400);
-    }
 });
 
 // This is to get specific data from a hook-result

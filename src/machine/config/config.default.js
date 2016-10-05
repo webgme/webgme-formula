@@ -12,19 +12,20 @@ module.exports = {
         transports: [{
             transportType: 'File',
             options: {
-                name: 'info-file',
+                name: 'log-file',
                 filename: 'machine.log',
-                level: 'info',
+                level: 'debug',
                 json: false
             }
         }, {
-            transportType: 'File',
+            transportType: 'Console',
             options: {
-                name: 'error-file',
-                filename: 'machine-error.log',
-                level: 'error',
+                level: 'info',
+                colorize: true,
+                timestamp: true,
+                prettyPrint: true,
                 handleExceptions: true, // ignored by default when you create the logger, see the logger.create function
-                json: false
+                depth: 2
             }
         }]
     },
