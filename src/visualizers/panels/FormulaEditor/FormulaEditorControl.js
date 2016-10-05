@@ -58,6 +58,10 @@ define(['js/Constants',
             self._client.setAttributes(CONSTANTS.PROJECT_ROOT_ID, '_formulaConstraints', constraints);
         };
 
+        this._widget.onSaveTransformations = function (transformations) {
+            self._client.setAttributes(CONSTANTS.PROJECT_ROOT_ID, '_formulaTransformations', transformations);
+        };
+
         this._widget.onHookStateChanged = function (newSate) {
             if (newSate === 'on') {
                 // We have to set the hook for the project
@@ -93,17 +97,6 @@ define(['js/Constants',
                 self._widget.setHookStatus('off');
             }
         });
-    };
-
-    FormulaEditorControl.prototype._refreshConstraints = function () {
-        this._widget.setDomain(utils.getLanguageAsString(this._client, this._client.getAllMetaNodes()));
-        var node = this._client.getNode(CONSTANTS.PROJECT_ROOT_ID);
-
-        if (node) {
-            this._widget.setConstraints(node.getAttribute('_formulaConstraints') || "");
-        } else {
-            this._widget.setConstraints('');
-        }
     };
 
     FormulaEditorControl.prototype._getSimpleResults = function () {
@@ -168,7 +161,16 @@ define(['js/Constants',
     };
 
     FormulaEditorControl.prototype._refresh = function () {
-        this._refreshConstraints();
+        var node = this._client.getNode(CONSTANTS.PROJECT_ROOT_ID);
+
+        if (node) {
+            this._widget.setConstraints(node.getAttribute('_formulaConstraints') || '');
+            this._widget.setTransformations(node.getAttribute('_formulaTransformations') || '');
+        } else {
+            this._widget.setConstraints('');
+            this._widget.setTransformations('');
+        }
+        this._widget.setDomain(utils.getLanguageAsString(this._client, this._client.getAllMetaNodes()));
 
         if (this._widget.getHookStatus() === 'on') {
             this._getSimpleResults();

@@ -10,13 +10,19 @@ define([
     'js/Loader/LoaderCircles',
     'js/DragDrop/DropTarget',
     'plugin/GenFORMULA/GenFORMULA/utils',
+    './FormulaTransformationConfigurationDialog',
     'text!./FormulaEditor.html'
-], function (CodeMirror, LoaderCircles, dropTarget, utils, FormulaEditorHtml) {
+], function (CodeMirror, LoaderCircles, dropTarget, utils, TransformationConfigurationDialog, FormulaEditorHtml) {
     'use strict';
 
     var FormulaEditorWidget,
         WIDGET_CLASS = 'formula-editor',
-        CODE_SYNTAX_GUTTER = 'constraint-syntax';
+        CODE_SYNTAX_GUTTER = 'constraint-syntax',
+        EDITOR_VIEWS = {
+            NONE: 'none',
+            CONSTRAINT: 'constraint',
+            TRANSFORM: 'transform'
+        };
 
     function clearMarks(cm) {
         var marks = cm.getAllMarks(),
@@ -86,6 +92,15 @@ define([
             height = this._el.height(),
             self = this;
 
+        this._constraintsText = '';
+        this._transformationText = '';
+        this._transformationConfiguration = {
+            targetIds: [],
+            steps: [],
+            parentId: ''
+        };
+        this._constraintSyntaxError = '';
+        this._constraintResults = {};
         // set widget class
         this._el.addClass(WIDGET_CLASS);
 
@@ -95,12 +110,12 @@ define([
 
         this._el.append(FormulaEditorHtml);
 
-        this._saveConstraintsBtn = this._el.find('#constraintBtn').first();
+        this._saveBtn = this._el.find('#saveBtn').first();
 
-        this._saveConstraintsBtn.on('click', function (/*event*/) {
+        this._saveBtn.on('click', function (/*event*/) {
             self._previousCodeState = self._codemirror.getValue();
             self.onSaveConstraints(self._previousCodeState);
-            self._saveConstraintsBtn.attr('disabled', true);
+            self._saveBtn.attr('disabled', true);
             self.setResults({}); // constraints probably changed so we clear the results
         });
 
@@ -148,20 +163,24 @@ define([
                 }
             });
         };
-
         $(this._domainmirror.getWrapperElement()).prepend(this._translateModelBtn);
+
         this._domainVisible = false;
         this._domainBtn.on('click', function (/*event*/) {
             if (self._domainVisible) {
                 self._domainVisible = false;
                 self._domainBtn.removeClass('active');
                 $(self._domainmirror.getWrapperElement()).hide();
+                if (self._editorState === EDITOR_VIEWS.NONE) {
+                    self._editorState = EDITOR_VIEWS.CONSTRAINT;
+                    $(self._codemirror.getWrapperElement()).show();
+                }
             } else {
                 self._domainVisible = true;
                 self._domainBtn.addClass('active');
                 $(self._domainmirror.getWrapperElement()).show();
             }
-            self._resizeWidget(self._domainVisible, self._el.height());
+            self._resizeWidget(self._el.height());
         });
         $(self._domainmirror.getWrapperElement()).hide(); //by default we hide it
 
@@ -180,17 +199,22 @@ define([
         });
 
         this._codemirror.on('change', function () {
-            //clear syntax error signs from gutter
-            self._codemirror.clearGutter(CODE_SYNTAX_GUTTER);
-            clearMarks(self._codemirror);
-            self._codemirror.focus();
-            self._codemirror.refresh();
+            if (self._editorState === EDITOR_VIEWS.CONSTRAINT) {
+                //clear syntax error signs from gutter
+                self._codemirror.clearGutter(CODE_SYNTAX_GUTTER);
+                clearMarks(self._codemirror);
+                self._codemirror.focus();
+                self._codemirror.refresh();
+            } else if (self._editorState === EDITOR_VIEWS.TRANSFORM) {
+
+            }
+
             // If the content is changed from the last saved one we allow the save button.
             // Otherwise it will be disabled
             if (self._previousCodeState === self._codemirror.getValue()) {
-                self._saveConstraintsBtn.attr('disabled', true);
+                self._saveBtn.attr('disabled', true);
             } else {
-                self._saveConstraintsBtn.attr('disabled', false);
+                self._saveBtn.attr('disabled', false);
             }
             if (self._autoSaveTimer) {
                 clearTimeout(self._autoSaveTimer);
@@ -201,38 +225,108 @@ define([
             }, self._autoSaveInterval);
         });
 
-        this._codemirror.on('drop', function (cm, event) {
-            // console.log('dropping', event);
-        });
-
-        this._codemirror.on('cursorActivity', function (cm) {
-            // console.log('update', cm);
-        });
-
-        this._codemirror.on('focus', function (cm) {
-            // console.log('focused', cm.getValue());
-        });
+        this._transformOptionGroup = document.createElement('button');
+        this._transformOptionGroup.className = 'btn-group floating-btn-group';
+        this._runTransformationBtn = document.createElement('button');
+        this._runTransformationBtn.innerHTML = 'transform!';
+        this._runTransformationBtn.className = 'btn btn-xs btn-primary';
+        this._transformOptionGroup.appendChild(this._runTransformationBtn);
+        this._transformOptionBtn = document.createElement('button');
+        this._transformOptionBtn.innerHTML = '<i class="glyphicon glyphicon-cog"></i></button>';
+        this._transformOptionBtn.className = 'btn btn-xs';
+        this._transformOptionGroup.appendChild(this._transformOptionBtn);
+        $(this._codemirror.getWrapperElement()).prepend(this._transformOptionGroup);
+        this._refreshRunTransformBtn();
+        this._runTransformationBtn.onclick = function (event) {
+            console.log('pushed');
+        };
+        this._transformOptionBtn.onclick = function (event) {
+            $(self._transformOptionGroup).hide();
+            self._transformOptionDialog.show(function () {
+                self._transformOptionDialog.hide();
+                $(self._transformOptionGroup).show();
+                self._refreshRunTransformBtn();
+            });
+        };
+        this._transformOptionDialog = new TransformationConfigurationDialog(
+            $(this._codemirror.getWrapperElement()),
+            this._transformationConfiguration
+        );
+        this._transformOptionDialog.hide();
+        $(this._transformOptionGroup).hide();
 
         this._autoSaveInterval = 2000; //1s autoSave - if change happened
         this._autoSaveTimer = null;
         this._previousCodeState = null;
 
-        self._saveConstraintsBtn.attr('disabled', true);
+        self._saveBtn.attr('disabled', true);
 
         this._allOk = this._el.find('#allResultOk').first();
         this._allOk.hide();
         this._allOk.attr('disabled', true);
 
+        this._editorState = EDITOR_VIEWS.CONSTRAINT;
+        this._constraintBtn = this._el.find('#constraintBtn').first();
+        this._constraintBtn.addClass('active');
+        this._constraintBtn.on('click', function (/*event*/) {
+            //if there are unsaved changes we cannot switch
+            if (!self._saveBtn.attr('disabled')) {
+                return;
+            }
+
+            if (self._editorState !== EDITOR_VIEWS.CONSTRAINT) {
+                self._editorState = EDITOR_VIEWS.CONSTRAINT;
+                self._constraintBtn.addClass('active');
+                self._transformBtn.removeClass('active');
+                $(self._codemirror.getWrapperElement()).show();
+                self.setConstraints(self._constraintsText);
+                self.setResults(self._constraintResults);
+                self.setConstraintSyntaxErrors(self._constraintSyntaxError);
+                $(self._transformOptionGroup).hide();
+                self._transformOptionDialog.hide();
+            } else if (self._domainVisible) {
+                self._editorState = EDITOR_VIEWS.NONE;
+                self._constraintBtn.removeClass('active');
+                $(self._codemirror.getWrapperElement()).hide();
+            }
+            self._resizeWidget(self._el.height());
+        });
+
+        this._transformBtn = this._el.find('#transformBtn').first();
+        this._transformBtn.on('click', function (/*event*/) {
+            //if there are unsaved changes we cannot switch
+            if (!self._saveBtn.attr('disabled')) {
+                return;
+            }
+
+            if (self._editorState !== EDITOR_VIEWS.TRANSFORM) {
+                self._editorState = EDITOR_VIEWS.TRANSFORM;
+                self._transformBtn.addClass('active');
+                self._constraintBtn.removeClass('active');
+                $(self._codemirror.getWrapperElement()).show();
+                $(self._transformOptionGroup).show();
+                self._refreshRunTransformBtn();
+                self.setTransformations(self._transformationText);
+            } else if (self._domainVisible) {
+                self._editorState = EDITOR_VIEWS.NONE;
+                $(self._codemirror.getWrapperElement()).hide();
+                $(self._transformOptionGroup).hide();
+                self._transformOptionDialog.hide();
+                self._transformBtn.removeClass('active');
+            }
+            self._resizeWidget(self._el.height());
+        });
+
+        this._hookStatusBtnIcon.addClass('glyphicon-ban-circle');
+        this._hookStatusBtn.attr('title', 'Turn on automatic checking');
+
         //make it dropable
         dropTarget.makeDroppable($(this._el).find('.CodeMirror'), {
-            over: function (event, dragInfo) {
-                // console.log('over: ', event, dragInfo);
-            },
-            out: function (event, dragInfo) {
-                // console.log('out: ', event, dragInfo);
-            },
             drop: function (event, dragInfo) {
-                // console.log('drop: ', event, dragInfo);
+                // console.log('drop - on codemirror: ', event, dragInfo);
+                if (self._editorState !== EDITOR_VIEWS.CONSTRAINT) {
+                    return;
+                }
                 var cursor = self._codemirror.getCursor(),
                     metaName,
                     nodeName,
@@ -248,26 +342,27 @@ define([
                         self._codemirror.replaceRange(metaName, cursor);
                     }
                 }
-            },
-            activate: function (event, dragInfo) {
-                // console.log('activate: ', event, dragInfo);
-            },
-            deactivate: function (event, dragInfo) {
-                // console.log('deactivate: ', event, dragInfo);
             }
         });
-
         this._codemirror.refresh();
 
         // this._loader = new LoaderCircles({containerElement: this._el});
     };
 
+    FormulaEditorWidget.prototype._refreshRunTransformBtn = function () {
+        if (this._transformationConfiguration.targetIds.length > 0) {
+            $(this._runTransformationBtn).prop('disabled', false);
+        } else {
+            $(this._runTransformationBtn).prop('disabled', true);
+        }
+    };
     FormulaEditorWidget.prototype.onWidgetContainerResize = function (width, height) {
         this._logger.debug('Widget is resizing...');
-        this._resizeWidget(this._domainVisible, height);
+        this._resizeWidget(height);
     };
 
-    FormulaEditorWidget.prototype._resizeWidget = function (isSplit, height) {
+    FormulaEditorWidget.prototype._resizeWidget = function (height) {
+        var isSplit = this._domainVisible && this._editorState !== EDITOR_VIEWS.NONE;
         if (isSplit) {
             $(this._el).find('.CodeMirror').css({
                 height: height - 25 > 200 ? (height - 25) / 2 : 100
@@ -290,8 +385,13 @@ define([
     FormulaEditorWidget.prototype._autoSave = function () {
         if (this._previousCodeState !== this._codemirror.getValue()) {
             this._previousCodeState = this._codemirror.getValue();
-            this.onSaveConstraints(this._previousCodeState);
-            this._saveConstraintsBtn.attr('disabled', true);
+            if (this._editorState === EDITOR_VIEWS.CONSTRAINT) {
+                this.onSaveConstraints(this._previousCodeState);
+                this._constraintSyntaxError = '';
+            } else {
+                this.onSaveTransformations(this._previousCodeState);
+            }
+            this._saveBtn.attr('disabled', true);
         }
     };
 
@@ -322,6 +422,30 @@ define([
     FormulaEditorWidget.prototype.setConstraints = function (text) {
         // setting code from outside so the auto-save should not be triggered
         var cursor;
+
+        this._constraintsText = text;
+        if (this._editorState !== EDITOR_VIEWS.CONSTRAINT) {
+            return;
+        }
+        this._previousCodeState = text;
+        if (text !== this._codemirror.getValue()) {
+            cursor = this._codemirror.getCursor();
+            this._codemirror.setValue(text);
+            this._codemirror.refresh();
+            this._codemirror.setCursor(cursor);
+            this.setResults({}); //something is changed so we clear the results, just to be on the safe side
+        }
+    };
+
+    FormulaEditorWidget.prototype.setTransformations = function (text) {
+        // setting code from outside so the auto-save should not be triggered
+        var cursor;
+
+        this._transformationText = text;
+        if (this._editorState !== EDITOR_VIEWS.TRANSFORM) {
+            return;
+        }
+
         this._previousCodeState = text;
         if (text !== this._codemirror.getValue()) {
             cursor = this._codemirror.getCursor();
@@ -383,9 +507,11 @@ define([
     FormulaEditorWidget.prototype.setConstraintSyntaxErrors = function (errorTxt) {
         var lines, i, lineNumber, marker, numOfLines = this._codemirror.lineCount();
 
+        this._constraintSyntaxError = errorTxt;
+        if (this._editorState !== EDITOR_VIEWS.CONSTRAINT) {
+            return;
+        }
         lines = errorTxt.split('\n');
-
-        lines.push('fuck');
 
         for (i = 0; i < lines.length; i += 1) {
             lineNumber = Number(lines[i].substring(1, lines[i].indexOf(',')));
@@ -430,6 +556,10 @@ define([
 
     FormulaEditorWidget.prototype.onSaveConstraints = function () {
         this._logger.warn('The "onSaveConstraints" function is not overwritten');
+    };
+
+    FormulaEditorWidget.prototype.onSaveTransformations = function () {
+        this._logger.warn('The "onSaveTransformations" function is not overwritten');
     };
 
     FormulaEditorWidget.prototype.onHookStateChanged = function () {
