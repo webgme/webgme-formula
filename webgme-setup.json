@@ -9,7 +9,11 @@
     "addons": {},
     "decorators": {},
     "layouts": {},
-    "seeds": {},
+    "seeds": {
+      "4mlEmpty": {
+        "src": "src/seeds/4mlEmpty"
+      }
+    },
     "visualizers": {
       "FormulaEditor": {
         "src": "panels/FormulaEditor/FormulaEditorPanel",
