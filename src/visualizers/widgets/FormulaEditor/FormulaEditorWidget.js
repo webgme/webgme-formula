@@ -113,6 +113,9 @@ define([
         this._saveBtn = this._el.find('#saveBtn').first();
 
         this._saveBtn.on('click', function (/*event*/) {
+            if(self._saveBtn.attr('disabled')){
+                return;
+            }
             self._previousCodeState = self._codemirror.getValue();
             self.onSaveConstraints(self._previousCodeState);
             self._saveBtn.attr('disabled', true);
