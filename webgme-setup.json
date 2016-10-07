@@ -1,18 +1,6 @@
 {
   "components": {
     "plugins": {
-      "JSONLDExport": {
-        "src": "src/plugins/JSONLDExport",
-        "test": "test/plugins/JSONLDExport"
-      },
-      "Export2FORMULA": {
-        "src": "src/plugins/Export2FORMULA",
-        "test": "test/plugins/Export2FORMULA"
-      },
-      "CheckFORMULA": {
-        "src": "src/plugins/CheckFORMULA",
-        "test": "test/plugins/CheckFORMULA"
-      },
       "GenFORMULA": {
         "src": "src/plugins/GenFORMULA",
         "test": "test/plugins/GenFORMULA"
@@ -21,7 +9,11 @@
     "addons": {},
     "decorators": {},
     "layouts": {},
-    "seeds": {},
+    "seeds": {
+      "4mlEmpty": {
+        "src": "src/seeds/4mlEmpty"
+      }
+    },
     "visualizers": {
       "FormulaEditor": {
         "src": "panels/FormulaEditor/FormulaEditorPanel",
