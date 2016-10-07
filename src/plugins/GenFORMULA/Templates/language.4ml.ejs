@@ -20,7 +20,7 @@ function getTypeArrayString(paths, isTypes, noEnd) {
 
     for (i = 0; i < paths.length; i += 1) {
         // TODO check if there is a possibility that we use types but not any...
-        text += (isTypes === true ? 'any ' : '') + convertName(nodes[paths[i]].name) + (isTypes === true ? 'TYPE' : '');
+        text += convertName(nodes[paths[i]].name) + (isTypes === true ? 'TYPE' : '');
         if (!noEnd || i + 1 !== paths.length) {
             text += ' + ';
         }
@@ -53,24 +53,35 @@ for(path = 0; path < order.length; path += 1) {
 // <%= baseName %>
 <%= baseName %> ::= new (
 id: String,
-parent: <%= getTypeArrayString(nodes[order[path]].parentTypes, true, false) %>{NULL},
+parent: any <%= getTypeArrayString(nodes[order[path]].parentTypes, true, false) %>{NULL},
 attributes: any Attr__<%= baseName %>,
-pointers: any Ptr__<%= baseName %> ).
-Attr__<%= baseName %> ::= new (<%
+pointers: any Ptr__<%= baseName %>
+).
+Attr__<%= baseName %> ::= new (
+<%
     counter = 0;
 for(i = 0; i < nodes[order[path]].attributeNames.length; i += 1){
     counter += 1;
-%> <%= nodes[order[path]].attributeNames[i] %>:<%=
-    getFormulaTypeOfAttribute(nodes[order[path]].meta.attributes[nodes[order[path]].attributeNames[i]]) %> <%
-if (counter === nodes[order[path]].attributeNames.length){ %>).<% }else{ %>,<% }
+%>  <%= nodes[order[path]].attributeNames[i] %>: <%=
+    getFormulaTypeOfAttribute(nodes[order[path]].meta.attributes[nodes[order[path]].attributeNames[i]]) %><%
+if (counter === nodes[order[path]].attributeNames.length){
+%>
+).<% }else{
+%>,
+<% }
 } %>
-Ptr__<%= baseName %> ::= new (<%
+Ptr__<%= baseName %> ::= new (
+<%
     counter = 0;
 for(i = 0; i < nodes[order[path]].pointerNames.length;i += 1){
     counter += 1;
-%> <%= nodes[order[path]].pointerNames[i] %>: <%=
+%>  <%= nodes[order[path]].pointerNames[i] %>: any <%=
     getTypeArrayString(nodes[order[path]].pointerInfo[nodes[order[path]].pointerNames[i]], true, false) %>{NULL}<%
-if (counter === nodes[order[path]].pointerNames.length){ %> ).<% }else{ %> , <% }
+if (counter === nodes[order[path]].pointerNames.length){
+%>
+).<% }else{
+%>,
+<% }
 } %>
 <%= getTypeName(order[path]) %> ::= <%= getTypeArrayString(nodes[order[path]].subTypes, false, true) %>.
 // <%= baseName %> - end
