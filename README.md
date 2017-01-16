@@ -17,10 +17,10 @@ mono --version
 ## Installation:
 Here is the outline of the quickest and most compact deployment of the framework.
 
-- Checkout the entire repository
+- Checkout the entire repository and install all dependencies (`npm install` and `npm install webgme`)
 - Create own configuration files (if necessary)
-- Start Formula Machine ```npm run start_machine```
 - Start WebGME server  ```npm run start```
+- Start Formula Machine ```npm run start_machine```
 
 ## Extend your own deployment
 If you already have your own deployment built with [webgme-cli](https://github.com/webgme/webgme-cli) you can follow these steps to add the FormulaEditor to your work.
