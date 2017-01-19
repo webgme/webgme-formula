@@ -8,21 +8,29 @@ var config = require('webgme/config/config.default'),
 
 // The paths can be loaded from the webgme-setup.json
 config.plugin.basePaths.push(__dirname + '/../src/plugins');
+config.plugin.basePaths.push(__dirname + '/../node_modules/webgme-constraint-checker/src/plugins');
 config.seedProjects.basePaths.push(__dirname + '/../src/seeds/4mlEmpty');
 
 
 
+config.visualization.panelPaths.push(__dirname + '/../node_modules/webgme-constraint-checker/src/visualizers/panels');
 config.visualization.panelPaths.push(__dirname + '/../src/visualizers/panels');
 
 
 config.rest.components['4ml'] = __dirname + '/../src/routers/4ml/4ml.js';
+config.rest.components['routers/ConstraintResults'] = __dirname + '/../node_modules/webgme-constraint-checker/src/routers/ConstraintResults/ConstraintResults.js';
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
 // Add requirejs paths
 config.requirejsPaths = {
+  'ConstraintResults': 'node_modules/webgme-constraint-checker/src/routers/ConstraintResults',
+  'ConstraintCheckerCommitBadge': 'panels/ConstraintCheckerCommitBadge/ConstraintCheckerCommitBadgePanel',
+  'ConstraintChecker': 'node_modules/webgme-constraint-checker/src/plugins/ConstraintChecker',
   'panels': './src/visualizers/panels',
-  'widgets': './src/visualizers/widgets'
+  'widgets': './src/visualizers/widgets',
+  'panels/ConstraintCheckerCommitBadge': './node_modules/webgme-constraint-checker/src/visualizers/panels/ConstraintCheckerCommitBadge',
+  'widgets/ConstraintCheckerCommitBadge': './node_modules/webgme-constraint-checker/src/visualizers/widgets/ConstraintCheckerCommitBadge'
 };
 
 

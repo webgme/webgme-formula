@@ -31,12 +31,32 @@
     }
   },
   "dependencies": {
-    "plugins": {},
+    "plugins": {
+      "ConstraintChecker": {
+        "project": "webgme-constraint-checker",
+        "path": "node_modules/webgme-constraint-checker/src/plugins/ConstraintChecker"
+      }
+    },
     "addons": {},
     "decorators": {},
     "layouts": {},
     "seeds": {},
-    "visualizers": {},
-    "routers": {}
+    "visualizers": {
+      "ConstraintCheckerCommitBadge": {
+        "src": "panels/ConstraintCheckerCommitBadge/ConstraintCheckerCommitBadgePanel",
+        "title": "ConstraintCheckerCommitBadge",
+        "panel": "src/visualizers/panels/ConstraintCheckerCommitBadge",
+        "secondary": true,
+        "widget": "src/visualizers/widgets/ConstraintCheckerCommitBadge",
+        "project": "webgme-constraint-checker"
+      }
+    },
+    "routers": {
+      "ConstraintResults": {
+        "project": "webgme-constraint-checker",
+        "path": "node_modules/webgme-constraint-checker/src/routers/ConstraintResults",
+        "mount": "routers/ConstraintResults"
+      }
+    }
   }
 }
