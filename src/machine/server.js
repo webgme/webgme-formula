@@ -2,9 +2,16 @@
  * @author kecso / https://github.com/kecso
  */
 
+function logMeasurement(name, id, start) {
+    if(config.measure){
+        logger.debug('[Measurement][' + name + '][' + id + '][' + (new Date().getTime() - start) + 'ms]');
+    }
+}
+
 function executeHook(eventData) {
     var deferred = Q.defer(),
         state = 0,
+        startTime = new Date().getTime(),
         directory,
         formulaData,
         result;
@@ -21,7 +28,7 @@ function executeHook(eventData) {
             logger.debug('directory prepared - ', eventData.id);
             directory = directory_;
             state = 2;
-            return executeFormulaTasks(directory, formulaData);
+            return executeFormulaTasks(eventData.id, directory, formulaData);
         })
         .then(function (result_) {
             logger.debug('tasks executed - ', eventData.id);
@@ -35,7 +42,10 @@ function executeHook(eventData) {
             state = 4;
             return storeHookResult(eventData.id, result);
         })
-        .then(deferred.resolve)
+        .then(function() {
+            logMeasurement('hook', eventData.id, startTime);
+            deferred.resolve();
+        })
         .catch(function (err) {
             logger.debug('executeHook failure - ', eventData.id, ' - ', state);
             switch (state) {
@@ -90,7 +100,9 @@ function executeHook(eventData) {
 }
 
 function generate4ml(parameters) {
-    var deferred = Q.defer();
+    var deferred = Q.defer(),
+        startTime = new Date().getTime();
+
     logger.debug('generate4ml parameters (' + parameters.owner +
         ',' + parameters.projectName + ',' + parameters.commitHash + ')');
 
@@ -103,6 +115,7 @@ function generate4ml(parameters) {
                 return;
             }
             if (result.success && result.messages.length === 2) {
+                logMeasurement('g4ml', parameters.id, startTime);
                 deferred.resolve({
                     project: result.messages[0].message,
                     constraints: result.messages[1].message
@@ -184,8 +197,10 @@ function cleanFormula(directory) {
     return deferred.promise;
 }
 
-function executeFormulaTasks(directory, formulaData) {
-    var deferred = Q.defer();
+function executeFormulaTasks(id, directory, formulaData) {
+    var deferred = Q.defer(),
+        startTime = new Date().getTime();
+
     logger.debug('executeFormulaTasks directory', directory);
     //all the different Formula tasks can be executed independently
     Q.allSettled([
@@ -206,6 +221,8 @@ function executeFormulaTasks(directory, formulaData) {
                 output.constraints = results[0].value;
                 logger.debug('executeFormulaTasks done, output', output);
             }
+
+            logMeasurement('formula', id, startTime);
             deferred.resolve(output);
         });
 
@@ -372,6 +389,7 @@ __router.use(bodyParser.json({limit: '900mb'}));
 
 // This route should be used to trigger hook handling
 __router.post('/4ml', function (req, res) {
+    var startTime = new Date().getTime();
     logger.debug('Incoming post');
     if (req && req.body && req.body.hookId === config.hookId) {
         // console.time('hook');
@@ -383,6 +401,7 @@ __router.post('/4ml', function (req, res) {
             })
             .then(function () {
                 logger.debug('Post succeeded!');
+                logMeasurement('post', newHookEntry.id, startTime);
             })
             .catch(function (err) {
                 logger.error(err);

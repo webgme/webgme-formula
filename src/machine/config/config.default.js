@@ -42,5 +42,6 @@ module.exports = {
                 //poolSize: 5 // default pool size is 5
             }
         }
-    }
+    },
+    measure: true
 };
