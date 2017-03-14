@@ -16,7 +16,7 @@
     "q": "^1.4.1",
     "superagent": "^2.0.0-alpha.3",
     "webgme": "^2.9.0",
-    "webgme-constraint-checker": "webgme/constraint-checker",
+    "webgme-constraint-checker": "^1.0.0",
     "winston": "^2.2.0"
   },
   "peerDependencies": {
