@@ -1,0 +1,43 @@
+<%
+function convertName(name) {
+    return name.replace(/ /g, "_").replace(/\//g, "_").replace(/\./g, "__");
+}
+var i, count;
+// attribute formula node
+%>
+attr_<%= convertName(id) %> is Attr__<%= convertName(type.name) %>(<%
+for (i = 0; i < attributeNames.length; i += 1) {
+    switch(attributes[attributeNames[i]].type) {
+        case 'string':
+        case 'asset':
+            %> "<%= attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : '' %>"<%
+            break;
+        case 'boolean':
+            %> <%= attributes[attributeNames[i]] === true ? "TRUE" : "FALSE"%><%
+            break;
+        default:
+            %> <%= attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : 0 %><%
+    }
+    if(i < attributeNames.length - 1) {
+        %>,<%
+    } else {
+        %> ).<%
+    }
+}
+// pointer formula node
+%>
+// pointer formula node
+ptr_<%= convertName(id) %> is Ptr__<%= convertName(type.name) %>(<%
+for (var i = 0; i < pointerNames.length; i += 1) {
+    %> <%= pointers[pointerNames[i]] ? 'node_' + convertName(pointers[pointerNames[i]]) : 'NULL' %><%
+    if(i < pointerNames.length - 1) {
+        %>,<%
+    } else {
+        %> ).<%
+    }
+}
+%>
+node_<%= convertName(id) %> is <%=
+convertName(type.name) %>("<%= id %>" , <%=
+parent === 'NULL' || parent === '' ? 'NULL' : 'node_' + convertName(parent) %> , attr_<%=
+convertName(id) %>, ptr_<%= convertName(id) %>).

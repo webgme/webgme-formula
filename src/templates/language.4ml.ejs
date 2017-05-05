@@ -1,0 +1,103 @@
+<%
+var path,
+        i,
+        baseName,
+        hasSets,
+        counter;
+
+function convertName(name) {
+    name = name.replace(/ /g, "_");
+    name = name.replace(/\./g, "__");
+    return name;
+}
+
+function getTypeName(path) {
+    return convertName(nodes[path].name) + 'TYPE';
+}
+
+function getTypeArrayString(paths, isTypes, noEnd) {
+    var i, text = '';
+
+    for (i = 0; i < paths.length; i += 1) {
+        // TODO check if there is a possibility that we use types but not any...
+        text += convertName(nodes[paths[i]].name) + (isTypes === true ? 'TYPE' : '');
+        if (!noEnd || i + 1 !== paths.length) {
+            text += ' + ';
+        }
+    }
+
+    return text;
+}
+
+function getFormulaTypeOfAttribute(attributeDescriptor) {
+    switch (attributeDescriptor.type || 'string') {
+        case 'string':
+        case 'asset':
+            return 'String';
+        case 'integer':
+            return 'Integer';
+        case 'float':
+            return 'Real';
+        case 'boolean':
+            return 'Boolean';
+    }
+}
+%>
+domain Language {
+<%
+for(path = 0; path < order.length; path += 1) {
+    //node definition
+    baseName = convertName(nodes[order[path]].name);
+    hasSets = nodes[order[path]].setNames.length > 0;
+%>
+// <%= baseName %>
+<%= baseName %> ::= new (
+id: String,
+parent: any <%= getTypeArrayString(nodes[order[path]].parentTypes, true, false) %>{NULL},
+attributes: any Attr__<%= baseName %>,
+pointers: any Ptr__<%= baseName %>
+).
+Attr__<%= baseName %> ::= new (
+<%
+    counter = 0;
+for(i = 0; i < nodes[order[path]].attributeNames.length; i += 1){
+    counter += 1;
+%>  <%= nodes[order[path]].attributeNames[i] %>: <%=
+    getFormulaTypeOfAttribute(nodes[order[path]].meta.attributes[nodes[order[path]].attributeNames[i]]) %><%
+if (counter === nodes[order[path]].attributeNames.length){
+%>
+).<% }else{
+%>,
+<% }
+} %>
+Ptr__<%= baseName %> ::= new (
+<%
+    counter = 0;
+for(i = 0; i < nodes[order[path]].pointerNames.length;i += 1){
+    counter += 1;
+%>  <%= nodes[order[path]].pointerNames[i] %>: any <%=
+    getTypeArrayString(nodes[order[path]].pointerInfo[nodes[order[path]].pointerNames[i]], true, false) %>{NULL}<%
+if (counter === nodes[order[path]].pointerNames.length){
+%>
+).<% }else{
+%>,
+<% }
+} %>
+<%= getTypeName(order[path]) %> ::= <%= getTypeArrayString(nodes[order[path]].subTypes, false, true) %>.
+// <%= baseName %> - end
+<%
+}
+%>
+// The representation of all nodes: GMENode
+GMENode ::= <%= getTypeArrayString(order, false, true) %>.
+
+// The representation of the containment relation: GMEContainment
+GMEContainment ::= (child: GMENode, parent:GMENode + {NULL}).
+GMEContainment(child, parent) :- child is GMENode, parent = child.parent ;
+GMEContainment(child, x), GMEContainment(x, parent).
+
+// The representation of the inheritance relation: GMEInheritance
+GMEInheritance ::= (node: GMENode, base: GMENode + {NULL}).
+GMEInheritance(node, base) :- node is GMENode, base = node.pointers.base ;
+GMEInheritance(node, x), GMEInheritance(x, base).
+}

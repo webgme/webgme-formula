@@ -6,7 +6,11 @@
         "test": "test/plugins/GenFORMULA"
       }
     },
-    "addons": {},
+    "addons": {
+      "FormulaChecker": {
+        "src": "src/addons/FormulaChecker"
+      }
+    },
     "decorators": {},
     "layouts": {},
     "seeds": {
@@ -27,6 +31,11 @@
       "4ml": {
         "src": "src/routers/4ml",
         "mount": "4ml"
+      },
+      "check4ml": {
+        "src": "src/routers/check4ml",
+        "test": "test/routers/check4ml",
+        "mount": "routers/check4ml"
       }
     }
   },

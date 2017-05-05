@@ -8,14 +8,16 @@ var config = require('webgme/config/config.default'),
 
 // The paths can be loaded from the webgme-setup.json
 config.plugin.basePaths.push(__dirname + '/../src/plugins');
+config.addOn.basePaths.push(__dirname + '/../src/addons');
 config.seedProjects.basePaths.push(__dirname + '/../src/seeds/4mlEmpty');
 
-
+config.addOn.enable = true;
 
 config.visualization.panelPaths.push(__dirname + '/../src/visualizers/panels');
 
 
 config.rest.components['4ml'] = __dirname + '/../src/routers/4ml/4ml.js';
+config.rest.components['routers/check4ml'] = __dirname + '/../src/routers/check4ml/check4ml.js';
 
 // Visualizer descriptors
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
