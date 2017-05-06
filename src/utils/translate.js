@@ -4,9 +4,12 @@
  * @author kecso / https://github.com/kecso
  */
 define([
+    'q',
     'common/util/ejs',
-    'text!src4ml/src/templates/language.4ml.ejs'
-], function (ejs, languageTemplate) {
+    'text!src4ml/src/templates/language.4ml.ejs',
+    'text!src4ml/src/templates/node.4ml.ejs',
+    'text!src4ml/src/templates/project.4ml.ejs'
+], function (Q, ejs, languageTemplate, nodeTemplate, projectTemplate) {
     'use strict';
 
     function getSubTypesOfNode(core, metaNodes, path) {
@@ -76,7 +79,7 @@ define([
     }
 
     function getConstraintDomainString(core, rootNode) {
-        return core.getAttribute(rootNode, '_formulaConstraints') || '';
+        return core.getAttribute(rootNode, '_formulaConstraints') || ' ';
     }
 
     function getLanguageDomainString(core, rootNode) {
@@ -114,9 +117,78 @@ define([
         return ejs.render(languageTemplate, ejsParameters);
     }
 
+    function getWholeProjectModelString(core, rootNode) {
+        var deferred = Q.defer(),
+            nodeTexts = [];
+
+        core.traverse(rootNode, {excludeRoot: true}, function (visited, next) {
+            // This is the visit function
+            var nodeParameters = {
+                    id: core.getPath(visited),
+                    parent: core.getParent(visited) === null ? 'NULL' :
+                        core.getPath(core.getParent(visited)),
+                    type: {
+                        name: core.getAttribute(core.getBaseType(visited), 'name'),
+                        id: core.getPath(core.getBaseType(visited))
+                    },
+                    name: core.getAttribute(visited, 'name'),
+                    pointerNames: core.getValidPointerNames(visited),
+                    attributeNames: core.getValidAttributeNames(visited).sort(),
+                    setNames: core.getValidSetNames(visited).sort(),
+                    attributes: {},
+                    pointers: {},
+                    sets: {}
+                },
+                i;
+
+            nodeParameters.pointerNames.push('base');
+            nodeParameters.pointerNames.sort();
+            nodeParameters.attributeNames.sort();
+            nodeParameters.setNames.sort();
+
+            for (i = 0; i < nodeParameters.attributeNames.length; i += 1) {
+                nodeParameters.attributes[nodeParameters.attributeNames[i]] = {
+                    type: core.getAttributeMeta(visited, nodeParameters.attributeNames[i]).type || 'string',
+                    value: core.getAttribute(visited, nodeParameters.attributeNames[i])
+                };
+            }
+
+            for (i = 0; i < nodeParameters.pointerNames.length; i += 1) {
+                nodeParameters.pointers[nodeParameters.pointerNames[i]] =
+                    core.getPointerPath(visited, nodeParameters.pointerNames[i]);
+            }
+
+            for (i = 0; i < nodeParameters.setNames.length; i += 1) {
+                nodeParameters.sets[nodeParameters.setNames[i]] =
+                    core.getMemberPaths(visited, nodeParameters.setNames[i]).sort();
+            }
+
+            nodeTexts.push(ejs.render(nodeTemplate, nodeParameters));
+            next(null);
+        })
+            .then(function () {
+                deferred.resolve(nodeTexts);
+            })
+            .catch(deferred.reject);
+
+        return deferred.promise;
+    }
+
+    function buildUp4mlInputString(commitHash, projectName, language, constraints, nodes) {
+        return ejs.render(projectTemplate, {
+            commitHash: commitHash,
+            projectName: projectName,
+            language: language,
+            nodes: nodes,
+            constraints: constraints
+        });
+    }
+
     return {
         getConstraintDomainString: getConstraintDomainString,
-        getLanguageDomainString: getLanguageDomainString
+        getLanguageDomainString: getLanguageDomainString,
+        getWholeProjectModelString: getWholeProjectModelString,
+        buildUp4mlInputString: buildUp4mlInputString
     };
 
 });

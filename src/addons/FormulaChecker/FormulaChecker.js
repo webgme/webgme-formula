@@ -63,8 +63,7 @@ define([
         var self = this;
 
         this._dbApi.ensureMainEntry(this.projectId, commitObj._id)
-            .then(function (mainEntry) {
-                console.log(mainEntry);
+            .then(function (/*mainEntry*/) {
                 self._previousState = self._currentState;
                 self._currentState = {
                     commitHash: commitObj._id,
@@ -72,7 +71,18 @@ define([
                     constraints: translate.getConstraintDomainString(self.core, rootNode)
                 };
 
-                // return getModel
+                return translate.getWholeProjectModelString(self.core, rootNode);
+            })
+            .then(function (nodeTexts) {
+                self._currentState.nodeTexts = nodeTexts;
+
+                return self._dbApi.saveInput(commitObj._id, {
+                    language: self._currentState.language,
+                    constraints: self._currentState.constraints,
+                    model: self._currentState.nodeTexts
+                });
+            })
+            .then(function (updatedMainEntry) {
                 callback(null, self.updateResult);
             })
             .catch(callback);
@@ -96,12 +106,6 @@ define([
             .catch(function (err) {
                 callback(err);
             });
-    };
-
-    FormulaChecker.prototype._getModel = function(core, rootNode){
-        var deferred = Q.defer();
-
-        return deferred.promise;
     };
 
     return FormulaChecker;

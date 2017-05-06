@@ -15,10 +15,10 @@ define([
             constraintResult: {type: Schema.Types.ObjectId, ref: 'constraint'}
         }),
         inputSchema = new Schema({
-            hash: {type: String, required: true},
+            hash: {type: String, required: true, index: true, unique: true},
             language: {type: String, required: true},
             constraints: {type: String, required: true},
-            model: {type: String, required: true}
+            model: {type: [String], required: true}
         }),
         constraintSchema = new Schema({name: String, evaluation: String}),
         constraintResultSchema = new Schema({

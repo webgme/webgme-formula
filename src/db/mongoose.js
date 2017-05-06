@@ -5,8 +5,9 @@
 define([
     'q',
     'mongoose',
+    'object-hash',
     './schemas'
-], function (Q, mongoose, models) {
+], function (Q, mongoose, HASH, models) {
     function dbApi(config) {
         var initDeferred = Q.defer(),
             mainModel = mongoose.model('main', models.main),
@@ -37,6 +38,71 @@ define([
                 .then(function (mainObject) {
                     deferred.resolve(mainObject);
                 })
+                .catch(deferred.reject);
+
+            return deferred.promise;
+        };
+
+        API.saveInput = function (commitHash, inputs) {
+            var deferred = Q.defer(),
+                mainObject,
+                inputObject,
+                hash;
+
+            mainModel.findOne({commitHash: commitHash})
+                .then(function (mainObject_) {
+                    mainObject = mainObject_;
+                    if (mainObject === null) {
+                        deferred.reject(new Error('Unknown commit [' + commitHash + ']'));
+                        return;
+                    }
+
+                    hash = HASH(inputs);
+
+                    return inputModel.findOne({hash: hash});
+                })
+                .then(function (inputObject_) {
+                    if (inputObject_ === null) {
+                        return inputModel.create({
+                            hash: hash,
+                            language: inputs.language,
+                            constraints: inputs.constraints,
+                            model: inputs.model
+                        });
+
+                    }
+                    return inputObject_;
+                })
+                .then(function (createdObject) {
+                    inputObject = createdObject;
+                    mainObject.input = inputObject.id;
+                    return mainObject.save();
+                })
+                .then(deferred.resolve)
+                .catch(deferred.reject);
+
+            return deferred.promise;
+        };
+
+        API.saveResults = function (commitHash, results) {
+            var deferred = Q.defer(),
+                resultObject;
+
+            resultModel.create(results)
+                .then(function (newObject) {
+                    resultObject = newObject;
+
+                    return mainModel.findOne({commitHash: commitHash});
+                })
+                .then(function (mainObject) {
+                    if (mainObject === null) {
+                        throw new Error('Cannot attach result to unknown commit [' + commitHash + ']');
+                    }
+
+                    mainObject.constraintResult = resultObject.id;
+                    return mainObject.save();
+                })
+                .then(deferred.resolve)
                 .catch(deferred.reject);
 
             return deferred.promise;
