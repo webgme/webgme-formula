@@ -9,8 +9,10 @@ define([
     'addon/AddOnBase',
     'src4ml/src/db/mongoose',
     'text!src4ml/src/config/config.json',
-    'src4ml/src/utils/translate'
-], function (AddOnBase, mongoose, config4ml_, translate) {
+    'src4ml/src/utils/translate',
+    'edge',
+    'q'
+], function (AddOnBase, mongoose, config4ml_, translate, edge, Q) {
     'use strict';
 
     /**
@@ -83,6 +85,7 @@ define([
                 });
             })
             .then(function (updatedMainEntry) {
+                console.log(self.formula(null,true));
                 callback(null, self.updateResult);
             })
             .catch(callback);
@@ -98,6 +101,16 @@ define([
         var self = this;
         this.logger.info('FormulaChecker got initialized at commitHash', commitObj._id);
 
+        var formula = edge.func(function () {/*
+         async (input) => {
+         var k = (int)input; // CLR state
+         return (Func<object,Task<object>>)
+         (async (i) => { return ++k; });
+         }
+         */
+        });
+
+        self.formula = formula(0, true);
         mongoose(config4ml)
             .then(function (api) {
                 self._dbApi = api;
