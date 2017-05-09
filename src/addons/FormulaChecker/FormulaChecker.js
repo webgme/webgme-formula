@@ -101,15 +101,42 @@ define([
         var self = this;
         this.logger.info('FormulaChecker got initialized at commitHash', commitObj._id);
 
-        var formula = edge.func(function () {/*
-         async (input) => {
-         var k = (int)input; // CLR state
-         return (Func<object,Task<object>>)
-         (async (i) => { return ++k; });
-         }
-         */
-        });
+        // var formula = edge.func(function () {/*
+        //  using ConstraintExecutor
+        //  async (input) => {
+        //  var k = (int)input; // CLR state
+        //  return (Func<object,Task<object>>)
+        //  (async (i) => { return ++k; });
+        //  }
+        //  */
+        // });
 
+        var formula = edge.func({source: function () {
+        /*
+
+         using ConstraintExecutor;
+         using System.Threading.Tasks;
+
+         public class Startup
+         {
+            private int count;
+            public async Task<object> Invoke(dynamic input)
+            {
+                var executor = new CommandExecutor();
+
+                count = 0;
+
+                return this.Run;
+            }
+
+            public async Task<object> Run(dynamic input)
+            {
+                return count++;
+            }
+         }
+         */},
+            reference: ['./src/addons/FormulaChecker/ConstraintExecutor.dll']
+        });
         self.formula = formula(0, true);
         mongoose(config4ml)
             .then(function (api) {
