@@ -174,13 +174,14 @@ define([
 
         self.core.traverse(self.rootNode, {excludeRoot: true}, function (visited, next) {
             // This is the visit function
-            var nodeParameters = {
+            var visitedBase = self.core.getBaseType(visited),
+                nodeParameters = {
                     id: self.core.getPath(visited),
                     parent: self.core.getParent(visited) === null ? 'NULL' :
                         self.core.getPath(self.core.getParent(visited)),
                     type: {
-                        name: self.core.getAttribute(self.core.getBaseType(visited), 'name'),
-                        id: self.core.getPath(self.core.getBaseType(visited))
+                        name: visitedBase === null ? '' : self.core.getAttribute(visitedBase, 'name'),
+                        id: visitedBase === null ? '' : self.core.getPath(visitedBase)
                     },
                     name: self.core.getAttribute(visited, 'name'),
                     pointerNames: self.core.getValidPointerNames(visited),

@@ -8,6 +8,7 @@ var config = require('webgme/config/config.default'),
 
 // The paths can be loaded from the webgme-setup.json
 config.plugin.basePaths.push(__dirname + '/../src/plugins');
+config.visualization.decoratorPaths.push(__dirname + '/../node_modules/webgme-finite-state-machine/src/decorators');
 config.seedProjects.basePaths.push(__dirname + '/../src/seeds/4mlEmpty');
 
 
@@ -21,6 +22,7 @@ config.rest.components['4ml'] = __dirname + '/../src/routers/4ml/4ml.js';
 config.visualization.visualizerDescriptors.push(__dirname + '/../src/visualizers/Visualizers.json');
 // Add requirejs paths
 config.requirejsPaths = {
+  'UMLStateMachineDecorator': 'node_modules\webgme-finite-state-machine\src\decorators\UMLStateMachineDecorator',
   'panels': './src/visualizers/panels',
   'widgets': './src/visualizers/widgets'
 };

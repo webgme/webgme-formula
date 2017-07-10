@@ -10,7 +10,8 @@ for (i = 0; i < attributeNames.length; i += 1) {
     switch(attributes[attributeNames[i]].type) {
         case 'string':
         case 'asset':
-            %> "<%= attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : '' %>"<%
+            %> "<%= (JSON.stringify(attributes[attributeNames[i]].value ? attributes[attributeNames[i]].value : ''))
+                        .substr(1).replace(/\"$/,"") %>"<%
             break;
         case 'boolean':
             %> <%= attributes[attributeNames[i]] === true ? "TRUE" : "FALSE"%><%

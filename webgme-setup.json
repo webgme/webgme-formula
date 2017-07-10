@@ -33,7 +33,12 @@
   "dependencies": {
     "plugins": {},
     "addons": {},
-    "decorators": {},
+    "decorators": {
+      "UMLStateMachineDecorator": {
+        "project": "webgme-finite-state-machine",
+        "path": "node_modules\\webgme-finite-state-machine\\src\\decorators\\UMLStateMachineDecorator"
+      }
+    },
     "layouts": {},
     "seeds": {},
     "visualizers": {},
