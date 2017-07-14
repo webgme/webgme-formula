@@ -59,9 +59,9 @@ seen all the time.
 - ![transformBtn](img/transform.png "transform model function") opens up the model transformation view. Currently the
 visuals are only a mockup as the functionality is not yet implemented.
 - There is a status icon on the right of the toolbar that can have multiple states:
- - If no icon is shown, then the status is OK.
- - ![warning](img/warning.png "communication error with the Formula machine") shows that there is a communication error
+   - If no icon is shown, then the status is OK.
+   - ![warning](img/warning.png "communication error with the Formula machine") shows that there is a communication error
  between the WebGME server and the Formula machine. If not resolves with the next commit, server log files should be
  checked.
- - ![wait](img/hourglass.png "Formula machine is working") tells that the client is currently waiting for the latest results.
+   - ![wait](img/hourglass.png "Formula machine is working") tells that the client is currently waiting for the latest results.
  
