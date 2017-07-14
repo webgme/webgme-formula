@@ -1,63 +1,45 @@
 # Formula integration framework for WebGME
-## More information
+## More information on the components
 [Formula](http://formula.codeplex.com/)
+[WebGME](https://webgme.org)
 
-## Formula Machine on linux
-To run the .NET executable on linux requires [Mono](http://www.mono-project.com). Follow the instructions [described here](http://www.mono-project.com/docs/getting-started/install/linux/) and for ubuntu run:
+![Formula Code Editor](img/formula_screenshot.png "Formula Code Editor - upper portion is Formula domain, the lower is the user defined constraints")
 
+## Installation (standalone):
+As a prerequisite, you need to have [mongodb](https://www.mongodb.com), [nodejs](https://nodejs.org) (LTS) and [git](https://git-scm.com/) on the target deployment machine.
+On linux based machines you will also need [Mono](http://www.mono-project.com) environment to run the Formula properly (See install Mono later).
+Then you need to execute the following steps:
+- ```git clone https://github.com/webgme/formula.git```
+- ```git checkout gemoc17```
+- ```git fetch -v --all```
+- ```git git pull```
+- ```npm install```
+- ```npm install webgme```
+
+### Installation of Mono on a linux based machine
+Follow the instructions [described here](http://www.mono-project.com/docs/getting-started/install/linux/).
+You can also simply try the apt-get if that is available:
+- ```sudo apt-get install mono-complete```
+
+## Configuration
+- You can configure all the parameters offered by [WebGME](https://github.com/webgme/webgme/blob/master/config/README.md).
+If you need to add your own configuration then it is best to pick a common environment name (which should be set for the NODE_ENV environment variable).
+- Furthermore you can configure the formula machine's parameters
+- Finally you need to change the ```component.json``` so that it contains the proper URL of the Formula machine:
 ```
-sudo apt-get install mono-complete
-```
-
-Check it is available via:
-```
-mono --version
-```
-
-## Installation:
-Here is the outline of the quickest and most compact deployment of the framework.
-
-- Checkout the entire repository and install all dependencies (`npm install` and `npm install webgme`)
-- Create own configuration files (if necessary)
-- Start WebGME server  ```npm run start```
-- Start Formula Machine ```npm run start_machine```
-
-## Extend your own deployment
-If you already have your own deployment built with [webgme-cli](https://github.com/webgme/webgme-cli) you can follow these steps to add the FormulaEditor to your work.
-
-- Import visualizer ```webgme import viz FormulaEditor webgme/formula```
-- Import plugin ```webgme import plugin GenFORMULA webgme/formula```
-- Import router ```webgme import router 4ml webgme/formula```
-- Create own configuration files (if necessary)
-- Start Formula Machine (go into directory ```node_modules/formula```) ```node src/machine/server.js```
-- Start WebGME server  ```npm start```
-
-## Configuration:
-The main configuration is the WebGME server [configuration](https://github.com/webgme/webgme/tree/master/config).
-You can also configure some parameters of the Formula machine in a similar manner.
-
-It is very important that you need to configure the component settings of the WebGME server
-so it will try to connect to your Formula machine on the right port.
-```
-"FormulaEditor": {
-    "baseUrl":"http://localhost:9009/4ml"
+{
+  "FormulaEditor": {
+    "baseUrl":"http://[your machines configured address]:[configured port of your formula machine]/4ml"
   }
+}
 ```
-In this example the url follows the default 9009 port of the Formula machine.
-If you want to change the port, you need to update this setting accordingly.
 
-It is also very important that the middleware has to be pointed correctly
-in the WebGME configuration otherwise the client will not be able to access
-the Formula machine. (there is no need to update this part of the default configuration)
+## Execution
+As this integration framework have two active component you need to run both to have the expected result:
+- ```npm run start```
+- ```npm run start_machine```
 
+Either run them in background, or in two separate terminal threads. If you used the default configuration, the server
+should be accessible at port 8888 [here](http://localhost:8888).
 
-### Useful commands for cloud machine
-```sudo NODE_ENV=verbose npm run start_machine```
-
-```sudo npm run start```
-
-- `Ctrl + Z` - put job in background
-- `jobs` - list background jobs
-- `bg 1` - start background job (by id)
-- `fg 1` - put job in foreground
-- `Ctrl + C` - kill job in foreground
+## Usage
