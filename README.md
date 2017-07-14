@@ -43,3 +43,10 @@ Either run them in background, or in two separate terminal threads. If you used 
 should be accessible at port 8888 [here](http://localhost:8888).
 
 ## Usage
+The following will give some guidance on how to use the FormulaEditor visualizer. First if your project do not allow
+it as a valid visualizer, then you have to configure it (or clean the given property field of your nodes, using the property editor).
+Once it is allowed, you can switch to this special view. It does not matter where you are in the containment hierarchy as
+the constraints you can write will be applied to the whole project and not just parts of it.
+Here are the toolbar buttons that control the behaviour of the visualizer:
+- The ![saveBtn](img/disk.png "Save button") is for saving your constraints. Although they are automatically saved, whenever
+you stop making changes for a certain amount of time.
