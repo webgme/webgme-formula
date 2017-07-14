@@ -12,6 +12,9 @@
     "seeds": {
       "4mlEmpty": {
         "src": "src/seeds/4mlEmpty"
+      },
+      "gemoc17": {
+        "src": "src/seeds/gemoc17"
       }
     },
     "visualizers": {

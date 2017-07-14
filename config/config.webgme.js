@@ -10,6 +10,7 @@ var config = require('webgme/config/config.default'),
 config.plugin.basePaths.push(__dirname + '/../src/plugins');
 config.visualization.decoratorPaths.push(__dirname + '/../node_modules/webgme-finite-state-machine/src/decorators');
 config.seedProjects.basePaths.push(__dirname + '/../src/seeds/4mlEmpty');
+config.seedProjects.basePaths.push(__dirname + '/../src/seeds/gemoc17');
 
 
 
