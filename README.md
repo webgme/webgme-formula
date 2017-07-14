@@ -72,5 +72,5 @@ can have the following states:
    - ![off](img/off.png "integration switched off for the project") shows that currently the project is not trying
 to communicate with the formula machine. Clicking in this state will result in turning on the feature.
    - ![on](img/on.png "integration is in use") shows that the function is in use. A single click will turn it off.
-   - ![fail](img/fail.png "switching of integration state is failed") show that the last change in the state of
+   - ![fail](img/fail.png "switching of integration state is failed") shows that the last change in the state of
 integration feature failed. You should click again to retry turning on/off.
