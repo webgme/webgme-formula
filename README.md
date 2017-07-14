@@ -48,5 +48,20 @@ it as a valid visualizer, then you have to configure it (or clean the given prop
 Once it is allowed, you can switch to this special view. It does not matter where you are in the containment hierarchy as
 the constraints you can write will be applied to the whole project and not just parts of it.
 Here are the toolbar buttons that control the behaviour of the visualizer:
-- The ![saveBtn](img/disk.png "Save button") is for saving your constraints. Although they are automatically saved, whenever
+- ![saveBtn](img/disk.png "Save button") is for saving your constraints. Although they are automatically saved, whenever
 you stop making changes for a certain amount of time.
+- ![domainBtn](img/file.png "show/Hide domain definitions") controls if the screen should visualize the synchronously available
+Formula domain. If this and the constraint editor is also visualized, then a fixed split screen will be shown (upper portion is
+the domain and the lower is the editor).
+- ![constraintBtn](img/qrcode.png "show/Hide constraint editor") controls if the constraint editor should be shown on
+the screen. As some portion of code editing must be visible, either the constraint editor or the Formula domain will be
+seen all the time.
+- ![transformBtn](img/transform.png "transform model function") opens up the model transformation view. Currently the
+visuals are only a mockup as the functionality is not yet implemented.
+- There is a status icon on the right of the toolbar that can have multiple states:
+ - If no icon is shown, then the status is OK.
+ - ![warning](img/warning.png "communication error with the Formula machine") shows that there is a communication error
+ between the WebGME server and the Formula machine. If not resolves with the next commit, server log files should be
+ checked.
+ - ![wait](img/hourglass.png "Formula machine is working") tells that the client is currently waiting for the latest results.
+ 
