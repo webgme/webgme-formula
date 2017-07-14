@@ -64,4 +64,13 @@ visuals are only a mockup as the functionality is not yet implemented.
  between the WebGME server and the Formula machine. If not resolves with the next commit, server log files should be
  checked.
    - ![wait](img/hourglass.png "Formula machine is working") tells that the client is currently waiting for the latest results.
- 
+   - ![error](img/thumbs.png "Formula machine reports error") says that the Formula machine were having an error
+during the processing of the last update. It should be only a temporary state which is solved by the followup commit.
+- The rightmost icon is a switch for activating and deactivating the connection towards the Formula machine. As a first
+step, every new project should switch this button on so that he continuous constraint checking will be possible. The button
+can have the following states:
+   - ![off](img/off.png "integration switched off for the project") shows that currently the project is not trying
+to communicate with the formula machine. Clicking in this state will result in turning on the feature.
+   - ![on](img/on.png "integration is in use") shows that the function is in use. A single click will turn it off.
+   - ![fail](img/fail.png "switching of integration state is failed") show that the last change in the state of
+integration feature failed. You should click again to retry turning on/off.
