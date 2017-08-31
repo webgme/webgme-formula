@@ -446,7 +446,7 @@ __httpServer.listen(config.port, function (err) {
     mongoose.connect(config.mongo.uri, config.mongo.options);
     mongoose.connection.on('error', function (err) {
         logger.error('MongoDB connection failure', err);
-        proces.exit(1);
+        process.exit(1);
     });
 
     mongoose.connection.once('open', function () {
