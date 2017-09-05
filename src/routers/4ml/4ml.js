@@ -7,8 +7,9 @@
 
 var express = require('express'),
     router = express.Router(),
+    getComponentsConfig = require('webgme/src/utils').getComponentsJson,
     superagent = require('superagent'),
-    StorageUtil = requireJS('common/storage/util'),
+    baseUrl = 'http://127.0.0.1:9009/4ml',
     Q = requireJS('q');
 
 function checkAccess(authorizer, userId, projectId) {
@@ -32,9 +33,7 @@ function checkAccess(authorizer, userId, projectId) {
 
 function initialize(middlewareOpts) {
     var logger = middlewareOpts.logger.fork('4ml-router'),
-        //gmeConfig = middlewareOpts.gmeConfig,
         ensureAuthenticated = middlewareOpts.ensureAuthenticated,
-        getUserId = middlewareOpts.getUserId,
         authorizer = middlewareOpts.gmeAuth.authorizer;
 
     logger.debug('initializing ...');
@@ -50,37 +49,31 @@ function initialize(middlewareOpts) {
     router.use('*', ensureAuthenticated);
 
     // all endpoints require read access to the given project
+
     router.get('/:projectId/:commitHash', function (req, res) {
-        superagent.get('http://127.0.0.1:' + middlewareOpts.gmeConfig.server.port + '/api/componentSettings/FormulaEditor')
-            .end(function (err, result) {
-                var config = result ? JSON.parse(result.text || '{}') : {};
-
-                config.baseUrl = config.baseUrl || 'http://127.0.0.1:9009/4ml';
-                checkAccess(authorizer, req.userData.userId, req.params.projectId)
-                    .then(function () {
-                        superagent.get(config.baseUrl + '/' + encodeURIComponent(req.params.projectId) + '/' +
-                            encodeURIComponent(req.params.commitHash))
-                            .end(function (err, result) {
-                                if (err) {
-                                    if (err.message.indexOf('Not found') !== -1) {
-                                        res.status(404);
-                                    } else {
-                                        logger.error('Error during result query:', err);
-                                        res.status(500);
-                                    }
-                                    res.send(err);
-                                    return;
-                                }
-                                res.send(JSON.parse(result.text));
-                            });
-                    })
-                    .catch(function (err) {
-                        logger.info('User doesn\'t have necessary rights to access results.', err);
-                        res.status(403);
-                        res.send(err);
+        checkAccess(authorizer, req.userData.userId, req.params.projectId)
+            .then(function () {
+                superagent.get(baseUrl + '/' + encodeURIComponent(req.params.projectId) + '/' +
+                    encodeURIComponent(req.params.commitHash))
+                    .end(function (err, result) {
+                        if (err) {
+                            if (err.message.indexOf('Not found') !== -1) {
+                                res.status(404);
+                            } else {
+                                logger.error('Error during result query:', err);
+                                res.status(500);
+                            }
+                            res.send(err);
+                            return;
+                        }
+                        res.send(JSON.parse(result.text));
                     });
+            })
+            .catch(function (err) {
+                logger.info('User doesn\'t have necessary rights to access results.', err);
+                res.status(403);
+                res.send(err);
             });
-
     });
 }
 
@@ -89,6 +82,13 @@ function initialize(middlewareOpts) {
  * @param {function} callback
  */
 function start(callback) {
+
+    getComponentsConfig(null, function (err, res) {
+        if (res && res.FormulaEditor && res.FormulaEditor.baseUrl) {
+            baseUrl = res.FormulaEditor.baseUrl;
+        }
+
+    });
     callback();
 }
 
@@ -99,7 +99,6 @@ function start(callback) {
 function stop(callback) {
     callback();
 }
-
 
 module.exports = {
     initialize: initialize,
