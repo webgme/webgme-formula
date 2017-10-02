@@ -7,7 +7,7 @@
 
 var express = require('express'),
     router = express.Router(),
-    getComponentsConfig = require('webgme/src/utils').getComponentsJson,
+    getComponentsConfig = require('webgme').getComponentsJson,
     superagent = require('superagent'),
     baseUrl = 'http://127.0.0.1:9009/4ml',
     Q = requireJS('q');
