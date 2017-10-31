@@ -9,12 +9,14 @@ define(['js/Constants',
     'js/NodePropertyNames',
     'plugin/GenFORMULA/GenFORMULA/utils',
     'superagent',
+    'formulasrc/templates/renderCache',
     'text!api/componentSettings/FormulaEditor'
 ], function (CONSTANTS,
              GMEConcepts,
              nodePropertyNames,
              utils,
              superagent,
+             renderCache,
              componentConfig) {
 
     'use strict';

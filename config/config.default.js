@@ -12,7 +12,8 @@ config.mongo.uri = 'mongodb://127.0.0.1:27017/formula';
 
 config.plugin.allowServerExecution = true;
 
-config.webhooks.enable = true;
+// config.webhooks.enable = true; -- TODO we need to iterate on how we re-introduce automatic checks
+config.requirejsPaths['formulasrc'] = './src';
 
 // We do not want to spam the console with bin script logs.
 config.bin.log.transports = [{

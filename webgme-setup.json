@@ -4,6 +4,10 @@
       "GenFORMULA": {
         "src": "src/plugins/GenFORMULA",
         "test": "test/plugins/GenFORMULA"
+      },
+      "CheckConformance": {
+        "src": "src/plugins/CheckConformance",
+        "test": "test/plugins/CheckConformance"
       }
     },
     "addons": {},

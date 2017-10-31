@@ -1,0 +1,62 @@
+domain GME {
+MetaNode ::= new (id: String).
+MetaInheritance ::= new (base: MetaNode, instance: MetaNode).
+MetaInstanceOf ::= new (MetaNode, MetaNode).
+MetaInstanceOf(b,i) :- MetaInheritance(b,i) ; MetaInheritance(b,m), MetaInheritance(m,i).
+Cardinality ::= new (low: Natural, high: Natural + {"*"}).
+ContainmentRule ::= new (parent: MetaNode, child: MetaNode, cardinality: Cardinality).
+SetRule ::= new (owner: MetaNode, member: MetaNode, name: String, cardinality: Cardinality).
+PointerRule ::= new (owner: MetaNode, target: MetaNode, name: String).
+AttributeRule ::= new (owner: MetaNode, name: String, type:{"integer","boolean","string"}).
+Inheritance ::= new (base: MetaNode, instance: Node).
+InstanceOf ::= (MetaNode, Node).
+InstanceOf(b,i) :- Inheritance(b,i) ; MetaInheritance(b,m), Inheritance(m,i).
+Node ::= new (id: String).
+Containment ::= new (parent: Node, child: Node).
+Set ::= new (owner: Node, member: Node, name: String).
+Pointer ::= new (owner:Node, target:Node, name: String).
+Attribute ::= new(name:String, owner:Node, value: String + Real + Integer).
+
+//Containment constraint 1: Child with no parent
+NoParent ::= (Node).
+NoParent(x) :- x is Node, no {p | InstanceOf(b,x), ContainmentRule(pb,b,card), InstanceOf(pb,p), Containment(p,x)}.
+NoParentRule :- x is Node, NoParent(x).
+conforms :- no NoParentsRule.
+
+//Containment constraint 2: Parent with not enough children
+NotEnoughChildren ::= (Node).
+NotEnoughChildren(x) :- InstanceOf(b,x), ContainmentRule(b, cb, card), count({t | InstanceOf(cb, t), Containment(x,t)}) < card.low.
+NotEnoughChildrenRule :- x is Node, NotEnoughChildren(x).
+conforms :- no NotEnoughChildrenRule.
+
+//Containment constraint 3: Parent with too many children
+TooManyChildren ::= (Node).
+TooManyChildren(x) :- InstanceOf(b,x), ContainmentRule(b, cb, card), card.high != "*", count({t | InstanceOf(cb, t), Containment(x,t)}) > card.high.
+TooManyChildrenRule :- x is Node, TooManyChildren(x).
+conforms :- no TooManyChildrenRule.
+
+//Pointer constraint 1: No target
+NoNamedPointerTarget ::= (Node, String).
+NoNamedPointerTarget(x,n) :- x is Node, InstanceOf(px,x), PointerRule(px, pt, n), no { t | InstanceOf(pt, t), Pointer(x,t,n)}.
+NoPointerTarget ::= (Node).
+NoPointerTarget(x) :- x is Node, NoNamedPointerTarget(x, _).
+NoPointerTargetRule :- x is Node, NoPointerTarget(x).
+conforms :- no NoPointerTargetRule.
+
+
+//Set constraint 1: Too few member
+NotEnoughMemberForSet ::= (Node, String).
+NotEnoughMemberForSet(x,n) :- x is Node, SetRule(ot,mt,n,c), InstanceOf(ot,x), count({m | InstanceOf(mt,m), Set(x,m,n)}) < c.low.
+NotEnoughMember ::= (Node).
+NotEnoughMember(x) :- NotEnoughMemberForSet(x,_).
+NotEnoughMemberRule :- x is Node, NotEnoughMember(x).
+conforms :- no NotEnoughMemberRule.
+
+//Set constraint 2: Too much member
+TooMuchMemberForSet ::= (Node, String).
+TooMuchMemberForSet(x,n) :- x is Node, SetRule(ot,mt,n,c), c.high != "*", InstanceOf(ot,x), count({m | InstanceOf(mt,m), Set(x,m,n)}) > c.high.
+TooMuchMember ::= (Node).
+TooMuchMember(x) :- TooMuchMemberForSet(x,_).
+TooMuchMemberRule :- x is Node, TooMuchMember(x).
+conforms :- no TooMuchMemberRule.
+
