@@ -4,9 +4,7 @@ model <%= modelName %> of GME {
 // META elements governing the model
 <%
 function convertName(name) {
-    name = name.replace(/ /g, "_");
-    name = name.replace(/\./g, "__");
-    return name;
+    return name.replace(/ /g, "_").replace(/\//g, "_").replace(/\./g, "__");
 }
 
 function convertCardinality(input, isLow) {
@@ -82,3 +80,4 @@ for(j = 0;j < targets.length;j += 1){
 %>
 
 //The model
+

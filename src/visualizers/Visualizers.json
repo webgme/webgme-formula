@@ -4,5 +4,11 @@
     "title": "FormulaEditor",
     "panel": "panels/FormulaEditor/FormulaEditorPanel",
     "DEBUG_ONLY": false
+  },
+  {
+    "id": "FormulaViz",
+    "title": "FormulaViz",
+    "panel": "panels/FormulaViz/FormulaVizPanel",
+    "DEBUG_ONLY": false
   }
 ]

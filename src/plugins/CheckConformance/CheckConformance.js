@@ -13,13 +13,15 @@ define([
     'plugin/PluginBase',
     'plugin/PluginMessage',
     'common/util/ejs',
-    'formulasrc/templates/renderCache'
+    'formulasrc/templates/renderCache',
+    'q'
 ], function (PluginConfig,
              pluginMetadata,
              PluginBase,
              PluginMessage,
              ejs,
-             renderCache) {
+             renderCache,
+             Q) {
     'use strict';
 
     pluginMetadata = JSON.parse(pluginMetadata);
@@ -75,23 +77,40 @@ define([
         renderPars.metaNodes = self.core.getAllMetaNodes(activeNode);
         renderPars.core = self.core;
 
-        for (var path in renderPars.metaNodes) {
-            console.log('META-', self.core.getAttribute(renderPars.metaNodes[path], 'name'), ':', JSON.stringify(self.core.getOwnJsonMeta(renderPars.metaNodes[path]), null, 2));
-        }
         formulaFile += ejs.render(renderCache.raw.s1, {});
         formulaFile += ejs.render(renderCache.raw.s2, renderPars);
-        formulaFile += ejs.render(renderCache.raw.s3, renderPars);
-        formulaFile += ejs.render(renderCache.raw.s4, renderPars);
 
-        // self.result.addMessage(new PluginMessage({
-        //     commitHash: self.commitHash,
-        //     activeNode: self.core.getPath(activeNode),
-        //     message: formulaFile
-        // }));
+        self.loadNodeMap(activeNode)
+            .then(function(nodes){
+               var path, params;
 
-        console.log(formulaFile);
-        self.result.setSuccess(true);
-        callback(null, self.result);
+               for(path in nodes){
+
+                   params = {
+                       core: self.core,
+                       node: nodes[path]
+                   };
+                   formulaFile+= ejs.render(renderCache.raw.s3,params);
+               }
+
+                formulaFile += ejs.render(renderCache.raw.s4, renderPars);
+
+                // self.result.addMessage(new PluginMessage({
+                //     commitHash: self.commitHash,
+                //     activeNode: self.core.getPath(activeNode),
+                //     message: formulaFile
+                // }));
+
+                console.log(formulaFile);
+                self.result.setSuccess(true);
+                callback(null, self.result);
+
+            })
+            .catch(function(err){
+                console.log(err);
+                self.result.setSuccess(false);
+                callback(null, self.result);
+            });
     };
 
     return CheckConformance;

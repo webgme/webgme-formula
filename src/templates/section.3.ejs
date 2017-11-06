@@ -1,23 +1,42 @@
-Containment ::= new (parent: Node, child: Node).
-Set ::= new (owner: Node, member: Node, name: String).
-Pointer ::= new (owner:Node, target:Node, name: String).
-Attribute ::= new(name:String, owner:Node, value: String + Real + Integer).
-
 <%
 function convertName(name) {
-    name = name.replace(/ /g, "_");
-    name = name.replace(/\./g, "__");
-    return name;
+    return name.replace(/ /g, "_").replace(/\//g, "_").replace(/\./g, "__");
 }
+
 var nodeId = convertName(core.getPath(node)),
         keys, i, j, targets;
-%> <%= nodeId %> is Node(<%= nodeId %>).
-<%= nodeId %>_B_ is Inheritance(<%= core.getAttribute(core.getMetaType(node), 'name') %>, <%= nodeId %>).
+
+if(core.getParent(node) !== null){
+%> <%= nodeId %> is Node("<%= nodeId %>").
+ <%= nodeId %>__B__ is Inheritance(<%= convertName(core.getAttribute(core.getBaseType(node), 'name')) %>, <%= nodeId %>).
 <%
-keys = core.getChildrenPaths(node);
-for (i = 0; i < keys.length; i += 1) {
-// Containment ::= new (parent: Node, child: Node).
-%> <%= nodeId %>_C<%=i %> is Containment(<%= nodeId %>, <%= convertName(keys[i]) %>).
+keys = core.getAttributeNames(node);
+for(i = 0;i < keys.length;i += 1){
+    j = typeof core.getAttribute(node, keys[i]) === 'string';
+    if (j) {
+        j = '"' + core.getAttribute(node, keys[i]) + '"';
+    } else {
+        j = core.getAttribute(node, keys[i]);
+    }
+%> <%= nodeId %>_atr_<%= keys[i] %> is Attribute("<%= keys[i] %>", <%= nodeId %>, <%- j %>).
 <%
+}
+keys = core.getPointerNames(node);
+keys.splice(keys.indexOf('base'), 1);
+for(i = 0;i < keys.length;i += 1){
+    j = core.getPointerPath(node, keys[i]);
+if(j){
+%> <%= nodeId %>_ptr_<%= keys[i] %> is Pointer(<%= nodeId %>, <%= convertName(j) %>, "<%= keys[i] %>").
+<%
+}
+}
+keys = core.getSetNames(node);
+for(i = 0;i < keys.length;i += 1){
+    targets = core.getMemberPaths(node, keys[i]);
+for(j = 0;j < targets.length;j += 1){
+%> <%= nodeId %>_set_<%= keys[i] %>_<%= j %> is Set(<%= nodeId %>, <%= convertName(targets[j]) %>, "<%= keys[i] %>").
+<%
+}
+}
 }
 %>

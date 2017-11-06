@@ -28,6 +28,13 @@
         "panel": "src/visualizers/panels/FormulaEditor",
         "secondary": false,
         "widget": "src/visualizers/widgets/FormulaEditor"
+      },
+      "FormulaViz": {
+        "src": "panels/FormulaViz/FormulaVizPanel",
+        "title": "FormulaViz",
+        "panel": "src/visualizers/panels/FormulaViz",
+        "secondary": false,
+        "widget": "src/visualizers/widgets/FormulaViz"
       }
     },
     "routers": {
