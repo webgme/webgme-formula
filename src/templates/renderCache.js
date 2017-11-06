@@ -3,48 +3,15 @@
  */
 define([
     'common/util/ejs',
-    'text!./domainPrefix.4ml.ejs',
-    'text!./domainPostfix.4ml.ejs',
-    'text!./metaElement.4ml.ejs',
-    'text!./modelElement.4ml.ejs',
-    'text!./modelElements.4ml.ejs',
-    'text!./modelPrefix.4ml.ejs',
-    'text!./model.4ml.ejs',
-    'text!./meta.4ml.ejs'
+    'text!./section.1.ejs',
+    'text!./section.2.ejs',
+    'text!./section.3.ejs',
+    'text!./section.4.ejs'
 ], function (ejs,
-             domainPrefix,
-             domainPostfix,
-             metaElement,
-             metaElements,
-             modelElement,
-             modelPrefix,
-             model,
-             meta) {
+             s1,
+             s2,
+             s3,
+             s4) {
 
-    var domainEjs = ejs.render(domain, {prefix: domainPrefix, postfix: domainPostfix}),
-        metaElementsEjs = ejs.render(metaElements, {singleExtract: metaElement}),
-        modelElementsEjs = "";
-
-    return {
-        statics: {
-            domain: domainPrefix,
-            closing: domainPostfix
-        },
-        templates: {
-            domainPrefix: domainPrefix,
-            domainPostfix: domainPostfix,
-            domain: domainEjs,
-            metaModel: ejs.render(meta, {
-                domain: domainEjs,
-                metaElement: metaElement,
-                postfix: domainPostfix
-            }),
-            model: ejs.render(model, {
-                domain: domainEjs,
-                meta: metaElementsEjs,
-                model: modelElementsEjs,
-                postfix: domainPostfix
-            })
-        }
-    };
+    return {raw: {s1: s1, s2: s2, s3: s3, s4: s4}};
 });

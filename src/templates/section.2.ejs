@@ -1,0 +1,84 @@
+}
+
+model <%= modelName %> of GME {
+// META elements governing the model
+<%
+function convertName(name) {
+    name = name.replace(/ /g, "_");
+    name = name.replace(/\./g, "__");
+    return name;
+}
+
+function convertCardinality(input, isLow) {
+    if (isLow) {
+        if (input < 0) {
+            return 0;
+        }
+        return input;
+    }
+
+    if (input === -1) {
+        return '"*"';
+    }
+    return input;
+}
+
+function nameOfPath(path) {
+    return convertName(core.getAttribute(metaNodes[path], 'name'));
+}
+
+var name, node, path, meta, keys, i, j, targets;
+
+for(path in metaNodes){
+    node = metaNodes[path];
+    meta = core.getOwnJsonMeta(node);
+    name = nameOfPath(path);
+// MetaNode ::= new (id: String).
+%> <%= name %> is MetaNode("<%= name %>").
+<%
+if(core.getBase(node) != null){
+// MetaInheritance ::= new (base: MetaNode, instance: MetaNode).
+%> <%= name %>_MI is MetaInheritance(<%= nameOfPath(core.getPath(core.getBase(node))) %>, <%= name %>).
+<%
+}
+keys = Object.keys(meta.attributes || {});
+for(i = 0;i < keys.length;i += 1){
+// AttributeRule ::= new (owner: MetaNode, name: String, type:{"integer","boolean","string"}).
+%> <%= name %>_AR_<%= keys[i] %> is AttributeRule(<%= name %>, "<%= keys[i] %>", "<%= meta.attributes[keys[i]].type %>").
+<%
+}
+
+if(meta.children){
+keys = meta.children.items;
+for(i = 0;i < keys.length;i += 1) {
+    // ContainmentRule ::= new (parent: MetaNode, child: MetaNode, cardinality: Cardinality).
+%> <%= name %>_CR_<%= i %> is ContainmentRule(<%= name %>, <%= nameOfPath(keys[i]) %>, Cardinality(<%- convertCardinality(meta.children.minItems[i], true) %>, <%- convertCardinality(meta.children.maxItems[i], false) %>)).
+<%
+}
+}
+
+keys = Object.keys(meta.pointers || {});
+for(i = 0;i < keys.length;i += 1){
+if(meta.pointers[keys[i]].max === 1){
+// PointerRule ::= new (owner: MetaNode, target: MetaNode, name: String).
+targets = meta.pointers[keys[i]].items;
+for(j = 0;j < targets.length;j += 1){
+%> <%= name %>_PR_<%= keys[i] %> is PointerRule(<%= name %>, <%= nameOfPath(targets[j]) %>, "<%= keys[i] %>").
+<%
+}
+} else {
+// SetRule ::= new (owner: MetaNode, member: MetaNode, name: String, cardinality: Cardinality).
+targets = meta.pointers[keys[i]].items;
+for(j = 0;j < targets.length;j += 1){
+%> <%= name %>_SR_<%= keys[i] %> is SetRule(<%= name %>, <%= nameOfPath(targets[j]) %>, "<%= keys[i] %>", <%
+%>Cardinality(<%- convertCardinality(meta.pointers[keys[i]].minItems[j], true) %>, <%- convertCardinality(meta.pointers[keys[i]].maxItems[j], false) %>)).
+<%
+}
+
+}
+}
+
+}
+%>
+
+//The model

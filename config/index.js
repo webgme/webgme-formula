@@ -10,4 +10,5 @@ var env = process.env.NODE_ENV ? process.env.NODE_ENV : process.platform === 'wi
     validateConfig = require('webgme/config/validator');
 
 validateConfig(configFilename);
+
 module.exports = config;

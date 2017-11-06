@@ -10,11 +10,16 @@
 define([
     'plugin/PluginConfig',
     'text!./metadata.json',
-    'plugin/PluginBase'
-], function (
-    PluginConfig,
-    pluginMetadata,
-    PluginBase) {
+    'plugin/PluginBase',
+    'plugin/PluginMessage',
+    'common/util/ejs',
+    'formulasrc/templates/renderCache'
+], function (PluginConfig,
+             pluginMetadata,
+             PluginBase,
+             PluginMessage,
+             ejs,
+             renderCache) {
     'use strict';
 
     pluginMetadata = JSON.parse(pluginMetadata);
@@ -56,35 +61,37 @@ define([
         // Use self to access core, project, result, logger etc from PluginBase.
         // These are all instantiated at this point.
         var self = this,
-            nodeObject;
+            activeNode = self.activeNode,
+            renderPars = {},
+            formulaFile = '';
 
+        if (activeNode === null) {
+            self.result.setSuccess(false);
+            callback(null, self.result);
+            return;
+        }
 
-        // Using the logger.
-        self.logger.debug('This is a debug message.');
-        self.logger.info('This is an info message.');
-        self.logger.warn('This is a warning message.');
-        self.logger.error('This is an error message.');
+        renderPars.modelName = self.core.getAttribute(activeNode, 'name');
+        renderPars.metaNodes = self.core.getAllMetaNodes(activeNode);
+        renderPars.core = self.core;
 
-        // Using the coreAPI to make changes.
+        for (var path in renderPars.metaNodes) {
+            console.log('META-', self.core.getAttribute(renderPars.metaNodes[path], 'name'), ':', JSON.stringify(self.core.getOwnJsonMeta(renderPars.metaNodes[path]), null, 2));
+        }
+        formulaFile += ejs.render(renderCache.raw.s1, {});
+        formulaFile += ejs.render(renderCache.raw.s2, renderPars);
+        formulaFile += ejs.render(renderCache.raw.s3, renderPars);
+        formulaFile += ejs.render(renderCache.raw.s4, renderPars);
 
-        nodeObject = self.activeNode;
+        // self.result.addMessage(new PluginMessage({
+        //     commitHash: self.commitHash,
+        //     activeNode: self.core.getPath(activeNode),
+        //     message: formulaFile
+        // }));
 
-        self.core.setAttribute(nodeObject, 'name', 'My new obj');
-        self.core.setRegistry(nodeObject, 'position', {x: 70, y: 70});
-
-
-        // This will save the changes. If you don't want to save;
-        // exclude self.save and call callback directly from this scope.
-        self.save('CheckConformance updated model.')
-            .then(function () {
-                self.result.setSuccess(true);
-                callback(null, self.result);
-            })
-            .catch(function (err) {
-                // Result success is false at invocation.
-                callback(err, self.result);
-            });
-
+        console.log(formulaFile);
+        self.result.setSuccess(true);
+        callback(null, self.result);
     };
 
     return CheckConformance;
