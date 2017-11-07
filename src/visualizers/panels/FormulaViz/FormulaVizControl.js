@@ -132,8 +132,9 @@ define([
     };
 
     FormulaVizControl.prototype._saveDocument = function (changedSegments) {
-        if (changedSegments[FORMULA_USER_SEGMENT]) {
-            this._client.setAttribute(CONSTANTS.PROJECT_ROOT_ID, changedSegments[FORMULA_USER_SEGMENT]);
+        if (typeof changedSegments[FORMULA_USER_SEGMENT] === 'string') {
+            this._client.setAttribute(CONSTANTS.PROJECT_ROOT_ID,
+                FORMULA_ATTR_IN_ROOT, changedSegments[FORMULA_USER_SEGMENT]);
         }
     };
 

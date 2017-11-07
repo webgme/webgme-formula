@@ -57,11 +57,6 @@ define(['./FormulaCodeMirrorMode', 'css!./styles/FormulaVizWidget.css'], functio
         this._wholeDocument = this.editor.getDoc();
         this._wholeDocument.on('change', function (/*doc,changeObj*/) {
             self.editor.clearGutter(SYNTAX_GUTTER);
-            if (self._autoSaveTimer) {
-                clearTimeout(self._autoSaveTimer);
-                self._autoSaveTimer = setTimeout(saving, self._autoSaveInterval);
-            }
-            self._autoSaveTimer = setTimeout(saving, self._autoSaveInterval);
         });
     };
 
@@ -227,7 +222,7 @@ define(['./FormulaCodeMirrorMode', 'css!./styles/FormulaVizWidget.css'], functio
                     {line: toLine, ch: 0},
                     {
                         readonly: true,
-                        atomic: true,
+                        atomic: false,
                         inclusiveLeft: true,
                         inclusiveRight: false,
                         className: 'read-only-code'

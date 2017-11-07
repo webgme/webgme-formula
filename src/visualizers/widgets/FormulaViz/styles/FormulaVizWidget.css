@@ -7,4 +7,15 @@
  */
 
 .formula-viz {
-  outline: none; }
+    outline: none;
+    padding: 2px;
+}
+
+.formula-viz .code-editor {
+    height: 100%;
+    width: 100%;
+}
+
+.formula-viz .read-only-code {
+    opacity: 0.5;
+}
