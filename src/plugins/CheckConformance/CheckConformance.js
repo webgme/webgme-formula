@@ -13,16 +13,14 @@ define([
     'plugin/PluginBase',
     'plugin/PluginMessage',
     'common/util/ejs',
-    'formulasrc/templates/renderCache',
-    'q'
+    'formulasrc/templates/renderCache'
 ], function (PluginConfig,
              pluginMetadata,
              PluginBase,
-             PluginMessage,
-             ejs,
-             renderCache,
-             Q) {
+             PluginMessage) {
     'use strict';
+
+    var FORMULA_DIR = './src/machine/mono/';
 
     pluginMetadata = JSON.parse(pluginMetadata);
 
@@ -63,54 +61,168 @@ define([
         // Use self to access core, project, result, logger etc from PluginBase.
         // These are all instantiated at this point.
         var self = this,
-            activeNode = self.activeNode,
-            renderPars = {},
-            formulaFile = '';
+            currentConfig = self.getCurrentConfig() || {},
+            projectContent = currentConfig['4ml'] || '',
+            fileName = self._generateFilename();
 
-        if (activeNode === null) {
+        this._FS = require('fs');
+        this._Q = require('q');
+
+        if (!projectContent) {
             self.result.setSuccess(false);
             callback(null, self.result);
             return;
         }
 
-        renderPars.modelName = self.core.getAttribute(activeNode, 'name');
-        renderPars.metaNodes = self.core.getAllMetaNodes(activeNode);
-        renderPars.core = self.core;
+        console.log('creating file');
+        self._add4mlFile(fileName, projectContent)
+            .then(function () {
+                console.log('running formula');
+                return self._runFormula(fileName, projectContent.match(/model (.+) of GME/)[1]);
+            })
+            .then(function (result) {
+                result = result || {errors: []};
+                result.errors = result.errors || [];
+                self.createMessage(self.activeNode, JSON.stringify(result.errors), 'info');
+                self.createMessage(self.activeNode, JSON.stringify({evaluation: result.evaluation}), 'info');
 
-        formulaFile += ejs.render(renderCache.raw.s1, {});
-        formulaFile += ejs.render(renderCache.raw.s2, renderPars);
-
-        self.loadNodeMap(activeNode)
-            .then(function(nodes){
-               var path, params;
-
-               for(path in nodes){
-
-                   params = {
-                       core: self.core,
-                       node: nodes[path]
-                   };
-                   formulaFile+= ejs.render(renderCache.raw.s3,params);
-               }
-
-                formulaFile += ejs.render(renderCache.raw.s4, renderPars);
-
-                // self.result.addMessage(new PluginMessage({
-                //     commitHash: self.commitHash,
-                //     activeNode: self.core.getPath(activeNode),
-                //     message: formulaFile
-                // }));
-
-                console.log(formulaFile);
+                console.log('removing file');
+                return self._remove4mlFile(fileName);
+            })
+            .then(function () {
+                console.log('finish up');
                 self.result.setSuccess(true);
                 callback(null, self.result);
-
             })
-            .catch(function(err){
-                console.log(err);
+            .catch(function (err) {
                 self.result.setSuccess(false);
-                callback(null, self.result);
-            });
+                callback(err, self.result);
+            })
+    };
+
+    CheckConformance.prototype._generateFilename = function () {
+        var charset = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'j', 'i', 'k', 'l',
+                'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'x', 'y', 'z'],
+            length = 6,
+            name = '';
+
+        while (length--) {
+            name += charset[Math.trunc(Math.random() * charset.length)];
+        }
+
+        return name;
+    };
+
+    CheckConformance.prototype._add4mlFile = function (filename, content) {
+        var deferred = this._Q.defer();
+        this._Q.ninvoke(this._FS, 'writeFile', FORMULA_DIR + filename, content)
+            .then(deferred.resolve)
+            .catch(deferred.reject);
+
+        return deferred.promise;
+    };
+
+    CheckConformance.prototype._remove4mlFile = function (filename) {
+        var deferred = this._Q.defer();
+        this._Q.ninvoke(this._FS, 'unlink', FORMULA_DIR + filename)
+            .then(deferred.resolve)
+            .catch(deferred.reject);
+
+        return deferred.promise;
+    };
+
+    CheckConformance.prototype._runFormula = function (fileName, modelName) {
+        var deferred = this._Q.defer(),
+            result = {errors: [], evaluation: null},
+            CP = require('child_process'),
+            state = 0,
+            prompt = '[]>',
+            stdoutData = '',
+            formula,
+            sendCommand = function (cmd) {
+                formula.stdin.write(cmd + '\n\r');
+            },
+            dataArrived = function (data) {
+                stdoutData += data;
+                if (data.indexOf(prompt) === -1) {
+                    return;
+                }
+                // console.log('--- 4ml stdout ---');
+                // console.log(stdoutData);
+                // console.log('--- end 4mlout ---');
+                switch (state) {
+                    case 0: // initial state - start load
+                        state = 1;
+                        sendCommand('load ' + fileName);
+                        break;
+                    case 1: // load result - check syntax, if fine go forward
+                        result.errors = checkSyntax(stdoutData);
+                        if (result.errors.length > 0) {
+                            // we have syntax errors, go to quit state
+                            result.evaluation = null;
+                            sendCommand('exit');
+                        } else {
+                            state = 2;
+                            sendCommand('wait on');
+                        }
+                        break;
+                    case 2: //wait turned on, let us query the conformance
+                        state = 3;
+                        sendCommand('query ' + modelName + ' GME.conforms');
+                        break;
+                    case 3: //query is done, let us list the result
+                        state = 4;
+                        sendCommand('list');
+                        break;
+                    case 4: // evaluate the query result and exit
+                        if (stdoutData.match(/Done .* true/)) {
+                            result.evaluation = true;
+                        } else if (stdoutData.match(/Done .* false/)) {
+                            result.evaluation = false;
+                        } else {
+                            result.evaluation = null;
+                        }
+                        sendCommand('exit');
+                        break;
+                }
+                stdoutData = '';
+            },
+            checkSyntax = function (stdout) {
+                var errors = [],
+                    match,
+                    i;
+
+                stdout = stdout.split('\n');
+                for (i = 0; i < stdout.length; i += 1) {
+                    console.log(stdout[i]);
+                    if (stdout[i].indexOf('Syntax error') !== -1) {
+                        match = stdout[i].match(/ \((.*),.*\): (.*)/);
+                        errors.push({line: match[1], text: match[2]});
+                    }
+                }
+                return errors;
+            };
+
+        formula = CP.exec('mono CommandLine.exe', {cwd: './src/machine/mono'}, function (err) {
+            // TODO right now if internal 4ml command fails, like loading due to syntax error, it returns ec:1
+            // if (err) {
+            //     deferred.reject(err);
+            //     return;
+            // }
+        });
+
+        formula.stdout.on('data', dataArrived);
+        formula.on('close', function (code) {
+            // TODO right now if internal 4ml command fails, like loading due to syntax error, it returns ec:1
+             console.log('finishing 4ml - ', code, '-', JSON.stringify(result));
+            // if (code !== 0) {
+            //     deferred.reject(new Error('unclean exit from FORMULA'));
+            //     return;
+            // }
+            deferred.resolve(result);
+        });
+
+        return deferred.promise;
     };
 
     return CheckConformance;

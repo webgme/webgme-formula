@@ -1,14 +1,24 @@
 {
   "id": "CheckConformance",
   "name": "CheckConformance",
-  "version": "0.1.0",
+  "version": "0.1.42",
   "description": "",
   "icon": {
-    "class": "glyphicon glyphicon-cog",
+    "class": "glyphicon glyphicon-eye-open",
     "src": ""
   },
   "disableServerSideExecution": false,
-  "disableBrowserSideExecution": false,
+  "disableBrowserSideExecution": true,
   "writeAccessRequired": false,
-  "configStructure": []
+  "configStructure": [
+    {
+      "name": "4ml",
+      "displayName": "Formula Project String",
+      "description": "If you already have a formula project text that you would like to check, you can put it here",
+      "value": "",
+      "valueType": "string",
+      "readOnly": false,
+      "writeAccessRequired": false
+    }
+  ]
 }

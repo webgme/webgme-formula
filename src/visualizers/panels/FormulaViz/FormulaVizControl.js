@@ -21,61 +21,8 @@ define([
     'use strict';
 
     var FORMULA_ATTR_IN_ROOT = '_formulaConstraints',
-        FORMULA_USER_SEGMENT = 'domain_user';
-
-    function addSegment(segmentedDocument, id, content, readOnly) {
-        segmentedDocument.composition.push(id);
-        segmentedDocument.segments[id] = {
-            value: content,
-            options: {readonly: readOnly}
-        };
-    }
-
-    function getEditorContent(client, modelNodeId) {
-        var deferred = Q.defer(),
-            core, root, modelNode, segmentedDocument = {composition: [], segments: {}};
-        Q.ninvoke(client, 'getCoreInstance', {})
-            .then(function (context) {
-                core = context.core;
-                root = context.rootNode;
-
-                return Q.ninvoke(core, 'loadByPath', root, modelNodeId);
-            })
-            .then(function (node) {
-                var params = {};
-                modelNode = node;
-                params.modelName = core.getAttribute(modelNode, 'name');
-                params.metaNodes = core.getAllMetaNodes(modelNode);
-                params.core = core;
-
-                addSegment(segmentedDocument, 'domain', ejs.render(renderCache.raw.s1, {}), true);
-                addSegment(segmentedDocument, FORMULA_USER_SEGMENT,
-                    core.getAttribute(root, FORMULA_ATTR_IN_ROOT) || '', false);
-                addSegment(segmentedDocument, 'model_meta', ejs.render(renderCache.raw.s2, params), true);
-                return Q.ninvoke(core, 'loadSubTree', modelNode);
-            })
-            .then(function (nodes) {
-                var i,
-                    params,
-                    modelSegment = '';
-
-                for (i = 0; i < nodes.length; i += 1) {
-                    params = {
-                        core: core,
-                        node: nodes[i]
-                    };
-                    modelSegment += ejs.render(renderCache.raw.s3, params);
-                }
-                modelSegment += ejs.render(renderCache.raw.s4, {});
-
-                addSegment(segmentedDocument, 'model', modelSegment, true);
-
-                deferred.resolve(segmentedDocument);
-            })
-            .catch(deferred.reject);
-
-        return deferred.promise;
-    }
+        FORMULA_USER_SEGMENT = 'domain_user',
+        FORMULA_CHECK_PLUGIN = 'CheckConformance';
 
     var FormulaVizControl;
 
@@ -87,6 +34,10 @@ define([
         this._client = options.client;
 
         this._docRevision = 0;
+        this._segmentedDocument = null;
+
+        this._checkRevision = 0;
+        this._autoCheck = false;
 
         // Initialize core collections and variables
         this._widget = options.widget;
@@ -111,18 +62,84 @@ define([
         this._widget.onSave = function (segmentedDocumentObject) {
             self._saveDocument(segmentedDocumentObject);
         };
+
+        this._widget.onClearMarks = function () {
+            self._setConsistencyResult();
+        }
+    };
+
+    FormulaVizControl.prototype._addSegment = function (segmentedDocument, id, content, readOnly) {
+        segmentedDocument.composition.push(id);
+        segmentedDocument.segments[id] = {
+            value: content,
+            options: {readonly: readOnly}
+        };
+    };
+
+    FormulaVizControl.prototype._getEditorContent = function () {
+        var self = this,
+            deferred = Q.defer(),
+            modelNodeId = this._currentNodeId,
+            core, root, modelNode, segmentedDocument = {composition: [], segments: {}};
+        Q.ninvoke(self._client, 'getCoreInstance', {})
+            .then(function (context) {
+                core = context.core;
+                root = context.rootNode;
+
+                return Q.ninvoke(core, 'loadByPath', root, modelNodeId);
+            })
+            .then(function (node) {
+                var params = {},
+                    userPart,
+                    modelNode = node;
+                params.modelName = core.getAttribute(modelNode, 'name');
+                params.metaNodes = core.getAllMetaNodes(modelNode);
+                params.core = core;
+
+                self._addSegment(segmentedDocument, 'domain', ejs.render(renderCache.raw.s1, {}), true);
+                userPart = core.getAttribute(root, FORMULA_ATTR_IN_ROOT) || '';
+                if (userPart.indexOf('\n') === -1) {
+                    userPart += '\n';
+                }
+                self._addSegment(segmentedDocument, FORMULA_USER_SEGMENT, userPart, false);
+                self._addSegment(segmentedDocument, 'model_meta', ejs.render(renderCache.raw.s2, params), true);
+                return Q.ninvoke(core, 'loadSubTree', modelNode);
+            })
+            .then(function (nodes) {
+                var i,
+                    params,
+                    modelSegment = '';
+
+                for (i = 0; i < nodes.length; i += 1) {
+                    params = {
+                        core: core,
+                        node: nodes[i]
+                    };
+                    modelSegment += ejs.render(renderCache.raw.s3, params);
+                }
+                modelSegment += ejs.render(renderCache.raw.s4, {});
+
+                self._addSegment(segmentedDocument, 'model', modelSegment, true);
+
+                deferred.resolve(segmentedDocument);
+            })
+            .catch(deferred.reject);
+
+        return deferred.promise;
     };
 
     FormulaVizControl.prototype._updateDocument = function () {
         var self = this,
-            myrevision;
+            myRevision;
+
         if (typeof this._currentNodeId !== 'string') {
             return;
         }
-        myrevision = ++this._docRevision;
-        getEditorContent(this._client, this._currentNodeId)
+        myRevision = ++this._docRevision;
+        this._getEditorContent()
             .then(function (segmentedDocument) {
-                if (myrevision === self._docRevision) {
+                if (myRevision === self._docRevision) {
+                    self._segmentedDocument = segmentedDocument;
                     self._widget.setSegmentedDocument(segmentedDocument);
                 }
             })
@@ -132,9 +149,83 @@ define([
     };
 
     FormulaVizControl.prototype._saveDocument = function (changedSegments) {
-        if (typeof changedSegments[FORMULA_USER_SEGMENT] === 'string') {
+        if (typeof changedSegments[FORMULA_USER_SEGMENT] === 'string' &&
+            '\n' !== changedSegments[FORMULA_USER_SEGMENT]) {
             this._client.setAttribute(CONSTANTS.PROJECT_ROOT_ID,
                 FORMULA_ATTR_IN_ROOT, changedSegments[FORMULA_USER_SEGMENT]);
+        }
+    };
+
+    FormulaVizControl.prototype._getSingleDoc = function () {
+        var doc = '',
+            segmented = this._segmentedDocument,
+            i;
+
+        if (typeof segmented !== 'object') {
+            return doc;
+        }
+
+        for (i = 0; i < segmented.composition.length; i += 1) {
+            doc += segmented.segments[segmented.composition[i]].value || '';
+        }
+
+        return doc;
+    };
+
+    FormulaVizControl.prototype._checkConsistency = function () {
+        var self = this,
+            docRevision = this._docRevision,
+            doc = this._getSingleDoc(),
+            checkRevision = ++this._checkRevision,
+            pluginContext = self._client.getCurrentPluginContext(FORMULA_CHECK_PLUGIN);
+
+        pluginContext.pluginConfig = {'4ml': doc};
+        Q.ninvoke(this._client, 'runServerPlugin', FORMULA_CHECK_PLUGIN, pluginContext)
+            .then(function (result) {
+                if (checkRevision !== self._checkRevision || docRevision !== self._docRevision) {
+                    self._logger.info('conformance result arrived late', result);
+                    return;
+                }
+
+                // now we just need to set the stage
+                var errors = JSON.parse(result.messages[0].message || []),
+                    conformance = JSON.parse(result.messages[1].message || 'null');
+                self._widget.markErrors(errors);
+                self._setConsistencyResult(conformance.evaluation);
+            })
+            .catch(function (err) {
+                self._logger.error('Failed conformance check:', err);
+            });
+    };
+
+    FormulaVizControl.prototype._setConsistencyResult = function (result) {
+        var params = {title: '', icon: null};
+        if (typeof this._consistencyIndexOnToolbar === 'number') {
+            this._toolbarItems[this._consistencyIndexOnToolbar].destroy();
+            this._toolbarItems.splice(this._consistencyIndexOnToolbar, 1);
+            this._consistencyIndexOnToolbar = null;
+        }
+
+        switch (result) {
+            case null:
+                params.title = 'Consistency check failed. Try again.';
+                params.icon = 'glyphicon glyphicon-exclamation-sign conformance-bad'
+                break;
+            case true:
+                params.title = 'The model is well-formed.';
+                params.icon = 'glyphicon glyphicon-ok formula-conformance-ok';
+                break;
+            case false:
+                params.title = 'The model is not conforms to the domain rules.';
+                params.icon = 'glyphicon glyphicon-remove formula-conformance-bad';
+                break;
+            default:
+                params = null;
+        }
+
+        if (params) {
+            this._consistencyIndexOnToolbar = this._toolbarItems.length;
+            this._toolbarItems.push(WebGMEGlobal.Toolbar.addButton(params));
         }
     };
 
@@ -150,6 +241,9 @@ define([
     /* * * * * * * * Node Event Handling * * * * * * * */
     FormulaVizControl.prototype._eventCallback = function (/*events*/) {
         this._updateDocument();
+        if (this._autoCheck) {
+            this._checkConsistency();
+        }
     };
 
     FormulaVizControl.prototype._stateActiveObjectChanged = function (model, activeObjectId) {
@@ -227,27 +321,27 @@ define([
 
         this._toolbarItems.push(toolBar.addSeparator());
 
-        /************** Go to hierarchical parent button ****************/
-        this.$btnModelHierarchyUp = toolBar.addButton({
-            title: 'Go to root',
-            icon: 'glyphicon glyphicon-circle-arrow-up',
+        this.$btnCheckConsistency = toolBar.addButton({
+            title: 'On-demand consistency check',
+            icon: 'glyphicon glyphicon-eye-open',
             clickFn: function (/*data*/) {
-                WebGMEGlobal.State.registerActiveObject('');
+                self._checkConsistency();
             }
         });
-        this._toolbarItems.push(this.$btnModelHierarchyUp);
-        this.$btnModelHierarchyUp.hide();
+        this._toolbarItems.push(this.$btnCheckConsistency);
 
-        /************** Checkbox example *******************/
-
-        this.$cbShowConnection = toolBar.addCheckBox({
-            title: 'toggle checkbox',
-            icon: 'gme icon-gme_diagonal-arrow',
+        this.$cbAutoCheck = toolBar.addCheckBox({
+            title: 'turn auto-check on/off',
+            checked: false,
+            icon: 'glyphicon glyphicon-tower',
             checkChangedFn: function (data, checked) {
-                self._logger.debug('Checkbox has been clicked!');
+                self._autoCheck = checked;
+                if (checked) {
+                    self._checkConsistency();
+                }
             }
         });
-        this._toolbarItems.push(this.$cbShowConnection);
+        this._toolbarItems.push(this.$cbAutoCheck);
 
         this._toolbarInitialized = true;
     };

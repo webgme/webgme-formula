@@ -6,7 +6,7 @@
 define([
     'codemirror/lib/codemirror',
     'css!codemirror/lib/codemirror.css',
-    'css!./styles/FormulaEditorWidget.css',
+    'css!./styles/FormulaVizWidget.css',
     'css!codemirror/theme/monokai.css'
 ], function (CodeMirror) {
     'use strict';

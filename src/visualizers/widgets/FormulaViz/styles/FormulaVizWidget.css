@@ -1,21 +1,19 @@
 /**
- * This file is for any css that you may want for this visualizer.
- *
- * Ideally, you would use the scss file also provided in this directory 
- * and then generate this file automatically from that. However, you can 
- * simply write css if you prefer
+ * This file is for any scss that you may want for this visualizer.
  */
-
 .formula-viz {
-    outline: none;
-    padding: 2px;
-}
-
-.formula-viz .code-editor {
+  outline: none;
+  padding: 2px; }
+  .formula-viz .code-editor {
     height: 100%;
-    width: 100%;
-}
+    width: 100%; }
+  .formula-viz .read-only-code {
+    opacity: 0.5; }
 
-.formula-viz .read-only-code {
-    opacity: 0.5;
-}
+.formula-conformance-ok {
+  color: green; }
+
+.formula-conformance-bad {
+  color: red; }
+
+/*# sourceMappingURL=FormulaVizWidget.css.map */
